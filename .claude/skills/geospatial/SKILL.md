@@ -33,7 +33,7 @@ description: "Use this skill when writing any code that involves user location: 
 ```typescript
 // src/services/location.ts
 import { latLngToCell, cellToLatLng } from 'h3-js';
-import { supabase } from '../db/client';
+import { supabase } from '../db/client';`
 
 export async function saveUserLocation(
   userId: string,

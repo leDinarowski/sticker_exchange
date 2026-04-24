@@ -144,3 +144,4 @@ temp/
 # Local scripts that may contain hardcoded credentials or one-off commands
 scratch.*
 local.*
+.vercel
