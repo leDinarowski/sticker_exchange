@@ -36,7 +36,7 @@ await zapi.sendButtons({
   message: 'Suas figurinhas ainda estao disponiveis?',
   buttons: [
     { id: 'confirm_inventory', label: 'Sim, ainda tenho' },
-    { id: 'update_inventory', label: 'Atualizar Figurinhas' },
+    { id: 'update_inventory', label: 'Atualizar figurinhas' },
     { id: 'clear_inventory', label: 'Nao tenho mais' },
   ],
 });
