@@ -1,0 +1,146 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# SECRETS & ENVIRONMENT — never commit these
+# ─────────────────────────────────────────────────────────────────────────────
+.env
+.env.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+.env.staging
+.env.*.local
+
+# .env.example is intentionally NOT listed here — it must be committed.
+# It contains no real secrets, only the variable names and documentation.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NODE.JS
+# ─────────────────────────────────────────────────────────────────────────────
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+.npm
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TYPESCRIPT BUILD OUTPUT
+# ─────────────────────────────────────────────────────────────────────────────
+dist/
+build/
+out/
+*.tsbuildinfo
+# Do NOT ignore *.d.ts globally — generated declaration files in dist/ are
+# already covered above. Hand-written types in src/types/ must be committed.
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# VERCEL
+# ─────────────────────────────────────────────────────────────────────────────
+# .vercel contains deployment tokens and project-specific config that should
+# not be shared. Each developer links their own Vercel project locally.
+.vercel/
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUPABASE
+# ─────────────────────────────────────────────────────────────────────────────
+# Local Supabase dev instance data (Docker volumes, auth state, storage).
+# The supabase/migrations/ folder IS committed — those are SQL source files.
+.supabase/
+supabase/.branches/
+supabase/.temp/
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TESTING & COVERAGE
+# ─────────────────────────────────────────────────────────────────────────────
+coverage/
+.vitest/
+*.lcov
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# LOGS
+# Logs can contain PII (user IDs, events). Never commit log output.
+# ─────────────────────────────────────────────────────────────────────────────
+logs/
+*.log
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# OPERATING SYSTEM
+# ─────────────────────────────────────────────────────────────────────────────
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+
+# Windows
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+
+# Linux
+*~
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EDITORS & IDEs
+# ─────────────────────────────────────────────────────────────────────────────
+# JetBrains (WebStorm, IntelliJ)
+.idea/
+*.iml
+
+# Vim / Neovim
+*.swp
+*.swo
+*.swn
+Session.vim
+
+# VS Code — ignoring local workspace settings that may contain paths or tokens.
+# The .vscode/extensions.json and .vscode/settings.json for shared formatting
+# rules CAN be committed if the team agrees — remove from this list explicitly.
+.vscode/
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TEMPORARY & CACHE FILES
+# ─────────────────────────────────────────────────────────────────────────────
+tmp/
+temp/
+.cache/
+.eslintcache
+.prettiercache
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CERTIFICATES & KEYS
+# Any locally generated cert or key file must never reach the repo.
+# ─────────────────────────────────────────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*.cert
+*.crt
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MISCELLANEOUS
+# ─────────────────────────────────────────────────────────────────────────────
+# Local scripts that may contain hardcoded credentials or one-off commands
+scratch.*
+local.*
