@@ -18,8 +18,8 @@
 - [DONE — 2026-04-24] Add `wa_username` nullable column to `users` in first migration
 - [DONE — 2026-04-24] Configure Supabase connection pooler — `SUPABASE_DB_POOLER_URL` in `.env.example` + documented in CLAUDE.md
 - [DONE — 2026-04-24] Create Vercel project + link to repo + add all env vars (`/api/health` returns 200)
-- [ ] Set up Z-API account + connect dedicated WhatsApp number
-- [ ] Configure Z-API webhook URL → Vercel `/api/webhook`
+- [DONE — 2026-04-25] Set up Z-API account + connect dedicated WhatsApp number
+- [DONE — 2026-04-25] Configure Z-API webhook URL → Vercel `/api/webhook`
 - [ ] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
 - [DONE — 2026-04-24] Set up GitHub repo with branch protection on `main` (require PR + passing CI)
 - [DONE — 2026-04-25] Set up GitHub Actions CI: `npm run typecheck && npm run lint && npm test`

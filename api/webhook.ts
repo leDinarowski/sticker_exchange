@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { logger } from '../src/utils/logger';
+import { logger } from '../src/utils/logger.js';
 
 /**
  * POST /api/webhook

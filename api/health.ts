@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { supabase } from '../src/db/client';
-import { logger } from '../src/utils/logger';
+import { supabase } from '../src/db/client.js';
+import { logger } from '../src/utils/logger.js';
 
 /**
  * GET /api/health

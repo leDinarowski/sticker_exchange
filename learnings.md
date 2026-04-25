@@ -43,6 +43,20 @@ This document captures real observations from building and running the system. I
 
 ---
 
+## 2026-04-25 — Vercel `ERR_MODULE_NOT_FOUND` for relative TypeScript imports
+
+**Hypothesis / Question:** `@vercel/node` compiles TypeScript `api/` functions — will relative imports like `'../src/utils/logger'` resolve correctly at runtime?
+
+**Observation:** No. `@vercel/node` transpiles TypeScript to JavaScript but does **not bundle** relative imports. At runtime, Node.js ESM (triggered by `"type": "module"` in `package.json`) requires explicit `.js` extensions on every relative import — `'../src/utils/logger'` fails; `'../src/utils/logger.js'` works. TypeScript resolves `.js` to the corresponding `.ts` at compile time, so writing `.js` in source is correct.
+
+Additionally, `tsconfig.json` had `rootDir: "src"` and `include: ["src/**/*"]`, which silently excluded `api/` from typechecking. Fixed by setting `rootDir: "."` and adding `"api/**/*"` to `include`.
+
+**Impact:** Smoke test returned `ERR_MODULE_NOT_FOUND` on every Vercel invocation.
+
+**Action:** All relative imports in `api/` now use `.js` extensions. `tsconfig.json` updated to cover `api/`. Rule: in any TypeScript + ESM project, always use `.js` extensions for relative imports.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

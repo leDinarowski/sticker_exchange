@@ -5,7 +5,7 @@
     "moduleResolution": "Bundler",
     "lib": ["ES2022"],
     "outDir": "dist",
-    "rootDir": "src",
+    "rootDir": ".",
     "strict": true,
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
@@ -16,6 +16,6 @@
     "skipLibCheck": true,
     "resolveJsonModule": true
   },
-  "include": ["src/**/*"],
+  "include": ["src/**/*", "api/**/*"],
   "exclude": ["node_modules", "dist", "tests"]
 }
