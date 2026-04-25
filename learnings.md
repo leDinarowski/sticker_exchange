@@ -57,6 +57,37 @@ Additionally, `tsconfig.json` had `rootDir: "src"` and `include: ["src/**/*"]`, 
 
 ---
 
+## 2026-04-25 — TypeScript `exactOptionalPropertyTypes` breaks `?? undefined` object spreads
+
+**Hypothesis / Question:** Can you assign `{ phone: x ?? undefined }` to a type with `phone?: string` when `exactOptionalPropertyTypes` is enabled?
+
+**Observation:** No. With `exactOptionalPropertyTypes: true`, an optional property typed as `string?` means the property must be *absent*, not `undefined`. Writing `{ phone: value ?? undefined }` produces `{ phone: string | undefined }`, which TypeScript rejects as incompatible. The fix is conditional assignment:
+```typescript
+const id: UserIdentifier = {};
+if (phone) id.phone = phone;
+```
+
+**Impact:** Affected the `UserIdentifier` construction in the webhook router. No architectural change — just a coding pattern to follow throughout.
+
+**Action:** Always use conditional assignment when populating optional-property objects under `exactOptionalPropertyTypes`. See ADR-014 for context.
+
+---
+
+## 2026-04-25 — Vercel env vars lost between deployments; preview requires branch-scoped vars
+
+**Hypothesis / Question:** Will env vars set during Phase 0 (via Vercel dashboard) persist for all future deployments, including preview branches?
+
+**Observation:** No. Env vars were wiped — "No Environment Variables found" — even though the Phase 0 health check had confirmed them. Root cause unknown (likely a project re-link or dashboard reset). Additionally, Vercel CLI v6+ requires `--value <v>` AND an explicit branch for preview-scoped vars: `vercel env add KEY preview feat/branch --value VALUE --yes`. Omitting the branch produces an interactive prompt that blocks scripted adds.
+
+**Impact:** All preview (feature branch) and production deployments failed at startup with `Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY`.
+
+**Action:**
+1. All vars re-added: 10 to `Production`, 10 to `Preview (feat/onboarding)`.
+2. Future branches: run `vercel env add KEY preview <branch> --value VALUE --yes` for each new feature branch OR promote vars to all-preview after confirming the CLI syntax.
+3. Add env var check to the PR checklist: confirm `vercel env ls` shows all required vars for the target environment before merging.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
