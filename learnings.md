@@ -57,6 +57,22 @@ Additionally, `tsconfig.json` had `rootDir: "src"` and `include: ["src/**/*"]`, 
 
 ---
 
+## 2026-04-25 — TypeScript `exactOptionalPropertyTypes` breaks `?? undefined` object spreads
+
+**Hypothesis / Question:** Can you assign `{ phone: x ?? undefined }` to a type with `phone?: string` when `exactOptionalPropertyTypes` is enabled?
+
+**Observation:** No. With `exactOptionalPropertyTypes: true`, an optional property typed as `string?` means the property must be *absent*, not `undefined`. Writing `{ phone: value ?? undefined }` produces `{ phone: string | undefined }`, which TypeScript rejects as incompatible. The fix is conditional assignment:
+```typescript
+const id: UserIdentifier = {};
+if (phone) id.phone = phone;
+```
+
+**Impact:** Affected the `UserIdentifier` construction in the webhook router. No architectural change — just a coding pattern to follow throughout.
+
+**Action:** Always use conditional assignment when populating optional-property objects under `exactOptionalPropertyTypes`. See ADR-014 for context.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

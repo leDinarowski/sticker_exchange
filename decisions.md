@@ -330,3 +330,35 @@ The base `no-redeclare` rule fires on the standard TypeScript `const Foo = {} as
 - One job, sequential steps — avoids per-job checkout/install overhead which outweighs any parallelism benefit at this project size
 - `npm ci` (not `npm install`) — deterministic, errors if lockfile is out of sync
 - Step order: typecheck → lint → test (cheapest gate first)
+
+---
+
+## ADR-014: User Lookup — `UserIdentifier` Dual-Field Pattern
+
+**Status:** Accepted
+**Date:** 2026-04-25
+
+### Context
+ADR-011 established that users must be lookable by `phone` OR `wa_username`. Phase 1 needed a concrete implementation of this in `src/db/users.ts`.
+
+### Decision
+All user lookup and creation functions accept a `UserIdentifier` object:
+
+```typescript
+export interface UserIdentifier {
+  phone?: string;
+  waUsername?: string;
+}
+```
+
+`findUser` queries: `WHERE phone = $1 OR (wa_username IS NOT NULL AND wa_username = $2)`.
+`createUser` inserts whichever field is present.
+The webhook entry point builds a `UserIdentifier` from the Z-API payload and passes it through the entire call chain.
+
+### Rationale
+- Z-API currently always provides `phone`. When WhatsApp @username becomes the primary identifier, only the webhook schema needs a new optional field — no handler or DB changes required.
+- Using an object type rather than two optional function parameters is cleaner to extend and impossible to accidentally swap argument positions.
+- `exactOptionalPropertyTypes: true` (tsconfig) requires conditional property assignment (`if (x) obj.prop = x`) rather than `{ prop: x ?? undefined }` — the object approach makes this pattern explicit.
+
+### Consequences
+- `users.phone` remains `NOT NULL` in the current schema. A migration will be needed when `phone` becomes nullable (when @username becomes the sole identifier). The application layer is already ready for that migration.
