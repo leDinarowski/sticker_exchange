@@ -29,9 +29,9 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 1 — Onboarding
+## Phase 1 — Onboarding (US-01)
 
-**Goal:** A new user can complete the full onboarding flow and reach the IDLE state.
+**Goal:** A new user can complete the full onboarding flow and reach the IDLE state with a name, location, and radius saved.
 
 **Depends on:** Phase 0
 
@@ -39,25 +39,62 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 - State machine: NEW → ONBOARDING_NAME → ONBOARDING_TERMS → ONBOARDING_LOCATION → ONBOARDING_RADIUS → ONBOARDING_LISTINGS → IDLE
 - Button messages at every decision point (terms, radius)
 - H3 snapping on location input
-- LGPD refusal path (Recuso → stop processing)
-- Echo-back confirmation for listing input
+- LGPD refusal path (Recuso → stop processing, record `refused_at`)
+- Graceful error handling: invalid input at each step → re-prompt, max 3 retries
 - Main menu displayed on reaching IDLE
 
-**Done when:** A tester can go from first message to a full profile with listings, using only button taps and minimal text input.
+**Done when:** A tester can go from first message to IDLE state using only button taps and minimal text input. Listings are not yet registered here — that is Phase 2.
 
 **Estimated effort:** 3–4 days
 
 ---
 
-## Phase 2 — Discovery Board (Olhar em Volta)
+## Phase 2 — Listing Registration (US-02)
+
+**Goal:** A user in IDLE state can register their sticker listings and have them saved with an expiry.
+
+**Depends on:** Phase 1
+
+**Deliverables:**
+- Parser: ranges ("12-25"), comma-separated ("12, 45"), mixed
+- Differential parser: "remover 45, 78" / "adicionar 203"
+- Validation: domain = 'sticker', numbers 1–670 only
+- Deduplication: prevent same number twice for same user
+- Echo-back confirmation: bot shows parsed list (buttons: [Confirmar] [Corrigir])
+- On confirm: insert listings with `expires_at` = NOW() + 24h → state = IDLE → show main menu
+
+**Done when:** A user can send "12-25, 78" and have it parsed, confirmed, and saved; invalid input is rejected with a re-prompt.
+
+**Estimated effort:** 2 days
+
+---
+
+## Phase 3 — Location & Radius Update (US-03)
+
+**Goal:** A registered user can update their location and search radius at any time from the main menu.
+
+**Depends on:** Phase 1
+
+**Deliverables:**
+- Handler: IDLE + [Atualizar Localizacao] → request location share
+- On new location: H3-snap → update geometry in DB
+- After location update: show radius menu, allow re-selection
+
+**Done when:** A user can share a new location from the main menu and have the discovery board use the updated position immediately.
+
+**Estimated effort:** 1 day
+
+---
+
+## Phase 4 — Discovery Board (US-04 — Olhar em Volta)
 
 **Goal:** A registered user can see nearby people with available listings.
 
-**Depends on:** Phase 1 (users must exist with location + listings)
+**Depends on:** Phase 2 (users must exist with location + active listings)
 
 **Deliverables:**
 - Geospatial query: ST_DWithin + active listings, top 10 by distance
-- Numbered list response format
+- Numbered list response format with name, distance, listing count
 - State transition to BROWSING with discovery_list saved in context
 - Empty result handling with radius suggestion
 
@@ -67,14 +104,14 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 3 — Bilateral Matching (Match Perfeito)
+## Phase 5 — Bilateral Matching (US-04 — Match Perfeito)
 
 **Goal:** A user who has declared wants can find exact bilateral swap opportunities.
 
-**Depends on:** Phase 2 (same infrastructure, different query)
+**Depends on:** Phase 4 (same infrastructure, different query)
 
 **Deliverables:**
-- `wanted_listings` registration flow (same parser as listings)
+- `wanted_listings` registration flow (same parser as Phase 2)
 - Bilateral SQL query (listings JOIN wanted_listings cross-user)
 - BROWSING state in bilateral mode
 - "Match Perfeito" label in results
@@ -85,11 +122,11 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 4 — Connection Flow
+## Phase 6 — Connection Flow (US-05)
 
 **Goal:** Two users can initiate and complete a connection, resulting in a WhatsApp group.
 
-**Depends on:** Phase 2 or 3 (user must be in BROWSING state with a discovery_list)
+**Depends on:** Phase 4 or 5 (user must be in BROWSING state with a discovery_list)
 
 **Deliverables:**
 - Selection parsing from BROWSING state
@@ -106,18 +143,17 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 5 — Inventory Management
+## Phase 7 — Inventory Management (US-02 + US-06)
 
 **Goal:** Users can update their listings at any time, and the system handles expiry gracefully.
 
-**Depends on:** Phase 1 (listings system), Phase 4 (post-trade nudge)
+**Depends on:** Phase 2 (listings system), Phase 6 (post-trade nudge)
 
 **Deliverables:**
 - [Atualizar Figurinhas] menu handler: full replace + differential (remover/adicionar)
 - Pre-expiry job at 20h: button message [Sim, ainda tenho] [Atualizar Figurinhas] [Nao tenho mais]
 - [Nao tenho mais] clears inventory immediately
 - CONFIRMING_INVENTORY state with 4h silence → passive expiry
-- Location update flow ([Atualizar Localizacao] menu handler)
 
 **Done when:** A user's listings expire correctly at 24h, the 20h nudge fires and all three response paths work, and inventory updates via menu function correctly.
 
@@ -125,7 +161,7 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 6 — Operational Hardening
+## Phase 8 — Operational Hardening
 
 **Goal:** The system is stable enough for a real user test with external testers.
 
@@ -134,7 +170,7 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 **Deliverables:**
 - Rate limiting: max 10 messages/minute per user
 - Error boundary: any unhandled state → friendly fallback + log
-- Health check endpoint: `GET /api/health`
+- Health check endpoint: `GET /api/health` (Supabase + Z-API connectivity)
 - Weekly location nudge (scheduled)
 - pg_cron (or GitHub Actions) for daily listing cleanup
 - Structured log audit: confirm no PII appears in any log line
@@ -145,11 +181,11 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 7 — First Real User Test
+## Phase 9 — First Real User Test
 
 **Goal:** 5–10 real users complete the full flow in a controlled test.
 
-**Depends on:** Phase 6
+**Depends on:** Phase 8
 
 **Activities:**
 - Recruit testers from a real sticker-trading context

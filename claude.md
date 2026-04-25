@@ -157,5 +157,22 @@ npm run dev          # Start local dev (tsx watch)
 npm test             # Run all tests
 npm run lint         # ESLint
 npm run typecheck    # tsc --noEmit
-npm run migrate      # Run Supabase migrations
+npm run migrate      # Push migrations to remote Supabase (supabase db push)
 ```
+
+## Local Development with Supabase
+
+Integration tests must run against a local Supabase instance (Docker required).
+
+```bash
+supabase start       # Start local Supabase stack (first run pulls Docker images)
+supabase db reset    # Apply all migrations to the local DB from scratch
+supabase stop        # Stop the local stack
+```
+
+Local connection values (set in `.env.local` or test setup — never commit):
+- `SUPABASE_URL`: `http://localhost:54321`
+- `SUPABASE_ANON_KEY` / `SUPABASE_SERVICE_ROLE_KEY`: printed by `supabase start`
+- `SUPABASE_DB_POOLER_URL`: `postgresql://postgres:postgres@localhost:54322/postgres`
+
+Unit tests (pure functions) require no DB. Integration tests must call `supabase db reset` in their setup to start from a clean state.
