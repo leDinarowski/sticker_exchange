@@ -104,6 +104,12 @@ The engine is domain-agnostic. Domain-specific data is stored in `listings` and 
 - Both parties must give explicit consent before a WhatsApp group is created
 - See `.claude/skills/lgpd/SKILL.md` for full compliance checklist
 
+## Task Tracking
+
+- When completing any item from `TODO.md`, mark it `[DONE — YYYY-MM-DD]` in the same commit as the implementation.
+- Never leave a completed item as `[ ]`.
+- Never delete items — move them to DONE with the date.
+
 ## Commands
 
 ```bash
