@@ -33,6 +33,7 @@ Available skills:
 - `lgpd` — consent recording, PII fields, bilateral consent flow
 - `listing-parser` — input formats, range parsing, echo-back, validation rules
 - `geospatial` — H3 snapping, ST_DWithin patterns, index requirements
+- `security` — secret scanning, credential leakage patterns, webhook verification, pre-PR checklist
 
 5. **`roadmap.md`** — phase sequencing and inter-phase dependencies. Check when scope is unclear.
 
@@ -43,6 +44,17 @@ Available skills:
 - Each PR must include passing tests for the feature it introduces.
 - No new feature starts until all existing tests pass (`npm test`).
 - PRs are small and focused — one feature per PR.
+
+## Pull Request Checklist
+
+Before opening a PR, all of the following must be true:
+
+1. `npm run typecheck && npm run lint && npm test` all pass locally
+2. The corresponding `TODO.md` item is marked `[DONE — YYYY-MM-DD]`
+3. `decisions.md` has a new ADR if an architectural choice was made
+4. `learnings.md` has a new entry if a non-obvious finding occurred
+5. Security checklist passed (`.claude/skills/security/SKILL.md`) — mandatory if the PR touches env vars, webhook handling, user data, or external API calls
+6. PR description includes: what changed, which TODO item it closes, and any ADR reference
 
 ## File Structure
 
