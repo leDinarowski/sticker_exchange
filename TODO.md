@@ -20,7 +20,7 @@
 - [DONE — 2026-04-24] Create Vercel project + link to repo + add all env vars (`/api/health` returns 200)
 - [DONE — 2026-04-25] Set up Z-API account + connect dedicated WhatsApp number
 - [DONE — 2026-04-25] Configure Z-API webhook URL → Vercel `/api/webhook`
-- [ ] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
+- [DONE — 2026-04-25] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
 - [DONE — 2026-04-24] Set up GitHub repo with branch protection on `main` (require PR + passing CI)
 - [DONE — 2026-04-25] Set up GitHub Actions CI: `npm run typecheck && npm run lint && npm test`
 
