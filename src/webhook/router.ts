@@ -1,0 +1,66 @@
+import { ok, Result } from 'neverthrow';
+import { logger } from '../utils/logger.js';
+import { User, ConversationStep } from '../types/index.js';
+import { transitionState, UserIdentifier } from '../db/users.js';
+import { WebhookPayload } from './schema.js';
+import { handleNew } from '../handlers/new.js';
+import { handleOnboardingName } from '../handlers/onboarding-name.js';
+import { handleOnboardingTerms } from '../handlers/onboarding-terms.js';
+import { handleOnboardingLocation } from '../handlers/onboarding-location.js';
+import { handleOnboardingRadius } from '../handlers/onboarding-radius.js';
+import { handleOnboardingListings } from '../handlers/onboarding-listings.js';
+import { showMainMenu } from '../handlers/idle.js';
+
+export async function route(
+  user: User | null,
+  identifier: UserIdentifier,
+  payload: WebhookPayload
+): Promise<Result<void, Error>> {
+  if (payload.message.fromMe) return ok(undefined);
+
+  const phone = identifier.phone ?? identifier.waUsername ?? '';
+
+  if (!user) {
+    return handleNew(identifier);
+  }
+
+  if (user.refused_at && !user.consented_at) {
+    const resetResult = await transitionState(user.id, ConversationStep.NEW);
+    if (resetResult.isErr()) return resetResult;
+    const reOnboardId: UserIdentifier = {};
+    if (user.phone) reOnboardId.phone = user.phone;
+    if (user.wa_username) reOnboardId.waUsername = user.wa_username;
+    return handleNew(reOnboardId);
+  }
+
+  const step = user.conversation_state?.step ?? ConversationStep.NEW;
+  logger.info({ userId: user.id, step, event: 'routing' });
+
+  switch (step) {
+    case ConversationStep.ONBOARDING_NAME:
+      return handleOnboardingName(user, payload);
+
+    case ConversationStep.ONBOARDING_TERMS:
+      return handleOnboardingTerms(user, payload);
+
+    case ConversationStep.ONBOARDING_LOCATION:
+      return handleOnboardingLocation(user, payload);
+
+    case ConversationStep.ONBOARDING_RADIUS:
+      return handleOnboardingRadius(user, payload);
+
+    case ConversationStep.ONBOARDING_LISTINGS:
+      return handleOnboardingListings(user);
+
+    case ConversationStep.IDLE:
+    case ConversationStep.BROWSING:
+    case ConversationStep.CONFIRMING_INVENTORY:
+    case ConversationStep.AWAITING_MATCH_RESPONSE:
+      return showMainMenu(user.id, phone);
+
+    case ConversationStep.NEW:
+    default:
+      logger.warn({ userId: user.id, step, event: 'unknown_state_fallback' });
+      return showMainMenu(user.id, phone);
+  }
+}

@@ -1,0 +1,45 @@
+import { Result } from 'neverthrow';
+import { logger } from '../utils/logger.js';
+import { transitionState, updateUserRadius } from '../db/users.js';
+import { ConversationStep, User } from '../types/index.js';
+import { sendText, sendButtons } from '../services/zapi.js';
+import { WebhookPayload } from '../webhook/schema.js';
+
+const RADIUS_MAP: Record<string, number> = {
+  r1: 1,
+  r3: 3,
+  r5: 5,
+};
+
+export async function handleOnboardingRadius(
+  user: User,
+  payload: WebhookPayload
+): Promise<Result<void, Error>> {
+  const buttonId = payload.message.buttonsResponseMessage?.selectedButtonId ?? '';
+  const radiusKm = RADIUS_MAP[buttonId];
+
+  if (radiusKm === undefined) {
+    return sendButtons(
+      user.phone,
+      'Qual e o seu raio de busca?',
+      [
+        { id: 'r1', label: '1 km' },
+        { id: 'r3', label: '3 km' },
+        { id: 'r5', label: '5 km' },
+      ]
+    );
+  }
+
+  const radiusResult = await updateUserRadius(user.id, radiusKm);
+  if (radiusResult.isErr()) return radiusResult;
+
+  const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS);
+  if (transitionResult.isErr()) return transitionResult;
+
+  logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.ONBOARDING_LISTINGS });
+
+  return sendText(
+    user.phone,
+    'Envie os numeros das suas figurinhas duplicadas. Use virgulas ou tracos: 12, 45, 78 ou 12-25.'
+  );
+}

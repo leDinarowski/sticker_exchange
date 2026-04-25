@@ -1,0 +1,115 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { ok } from 'neverthrow';
+
+vi.mock('../../src/db/users.js', () => ({
+  transitionState: vi.fn(),
+}));
+vi.mock('../../src/handlers/new.js', () => ({
+  handleNew: vi.fn(),
+}));
+vi.mock('../../src/handlers/onboarding-name.js', () => ({
+  handleOnboardingName: vi.fn(),
+}));
+vi.mock('../../src/handlers/onboarding-terms.js', () => ({
+  handleOnboardingTerms: vi.fn(),
+}));
+vi.mock('../../src/handlers/onboarding-location.js', () => ({
+  handleOnboardingLocation: vi.fn(),
+}));
+vi.mock('../../src/handlers/onboarding-radius.js', () => ({
+  handleOnboardingRadius: vi.fn(),
+}));
+vi.mock('../../src/handlers/onboarding-listings.js', () => ({
+  handleOnboardingListings: vi.fn(),
+}));
+vi.mock('../../src/handlers/idle.js', () => ({
+  showMainMenu: vi.fn(),
+}));
+
+import { route } from '../../src/webhook/router.js';
+import * as newHandler from '../../src/handlers/new.js';
+import * as nameHandler from '../../src/handlers/onboarding-name.js';
+import * as idleHandler from '../../src/handlers/idle.js';
+import { ConversationStep, User } from '../../src/types/index.js';
+import { WebhookPayload } from '../../src/webhook/schema.js';
+
+function makePayload(type: WebhookPayload['message']['type'] = 'text'): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    message: {
+      messageId: 'msg-1',
+      fromMe: false,
+      type,
+      text: type === 'text' ? { message: 'Oi' } : undefined,
+    },
+  };
+}
+
+function makeUser(step: ConversationStep, refused = false): User {
+  return {
+    id: 'uuid-1',
+    phone: '5511999999999',
+    wa_username: null,
+    name: null,
+    radius_km: 3,
+    conversation_state: { step, context: {}, updated_at: '' },
+    consented_at: refused ? null : null,
+    refused_at: refused ? '2026-04-25T00:00:00Z' : null,
+    created_at: '',
+  };
+}
+
+beforeEach(() => vi.clearAllMocks());
+
+describe('router', () => {
+  it('ignores messages from the bot itself (fromMe=true)', async () => {
+    const payload = makePayload();
+    payload.message.fromMe = true;
+
+    const result = await route(null, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(newHandler.handleNew).not.toHaveBeenCalled();
+  });
+
+  it('calls handleNew when user is null', async () => {
+    vi.mocked(newHandler.handleNew).mockResolvedValue(ok(undefined));
+
+    const result = await route(null, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(newHandler.handleNew).toHaveBeenCalledWith({ phone: '5511999999999' });
+  });
+
+  it('dispatches to onboarding-name handler when step is ONBOARDING_NAME', async () => {
+    vi.mocked(nameHandler.handleOnboardingName).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.ONBOARDING_NAME);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(nameHandler.handleOnboardingName).toHaveBeenCalledWith(user, expect.any(Object));
+  });
+
+  it('shows main menu for IDLE state', async () => {
+    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
+  });
+
+  it('shows main menu for unknown state (fallback)', async () => {
+    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+    const user = makeUser('UNKNOWN_STATE' as ConversationStep);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(idleHandler.showMainMenu).toHaveBeenCalled();
+  });
+});

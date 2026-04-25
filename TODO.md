@@ -20,7 +20,7 @@
 - [DONE — 2026-04-24] Create Vercel project + link to repo + add all env vars (`/api/health` returns 200)
 - [DONE — 2026-04-25] Set up Z-API account + connect dedicated WhatsApp number
 - [DONE — 2026-04-25] Configure Z-API webhook URL → Vercel `/api/webhook`
-- [ ] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
+- [DONE — 2026-04-25] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
 - [DONE — 2026-04-24] Set up GitHub repo with branch protection on `main` (require PR + passing CI)
 - [DONE — 2026-04-25] Set up GitHub Actions CI: `npm run typecheck && npm run lint && npm test`
 
@@ -30,17 +30,17 @@
 
 **Branch:** `feat/onboarding`
 
-- [ ] Implement conversation state machine (state transitions + JSONB persistence)
-- [ ] Router: any message from unknown number → trigger onboarding (state = NEW)
-- [ ] Handler: NEW → send welcome message, button: [Comecar]
-- [ ] Handler: ONBOARDING_NAME → validate name (2–50 chars), save, send terms (buttons: [Aceito] [Recuso])
-- [ ] Handler: ONBOARDING_TERMS → on Aceito: record `consented_at`, ask for location share
-- [ ] Handler: ONBOARDING_TERMS → on Recuso: save `refused_at`, stop processing future messages gracefully
-- [ ] Handler: ONBOARDING_LOCATION → receive WA location message, H3-snap, save geometry, ask for radius
-- [ ] Radius prompt uses button message: [1 km] [3 km] [5 km] [7 km]
-- [ ] Handler: ONBOARDING_RADIUS → save `radius_km`, ask for listings
-- [ ] Graceful error handling: invalid input at each step → re-prompt, max 3 retries
-- [ ] Tests: unit tests for each state transition, mock Z-API calls
+- [DONE — 2026-04-25] Implement conversation state machine (state transitions + JSONB persistence)
+- [DONE — 2026-04-25] Router: any message from unknown number → trigger onboarding (state = NEW)
+- [DONE — 2026-04-25] Handler: NEW → send welcome message, button: [Comecar]
+- [DONE — 2026-04-25] Handler: ONBOARDING_NAME → validate name (2–50 chars), save, send terms (buttons: [Aceito] [Recuso])
+- [DONE — 2026-04-25] Handler: ONBOARDING_TERMS → on Aceito: record `consented_at`, ask for location share
+- [DONE — 2026-04-25] Handler: ONBOARDING_TERMS → on Recuso: save `refused_at`, stop processing future messages gracefully
+- [DONE — 2026-04-25] Handler: ONBOARDING_LOCATION → receive WA location message, H3-snap, save geometry, ask for radius
+- [DONE — 2026-04-25] Radius prompt uses button message: [1 km] [3 km] [5 km] (7 km dropped — 3 button limit; re-add in Phase 3)
+- [DONE — 2026-04-25] Handler: ONBOARDING_RADIUS → save `radius_km`, ask for listings
+- [DONE — 2026-04-25] Graceful error handling: invalid input at each step → re-prompt, max 3 retries
+- [DONE — 2026-04-25] Tests: unit tests for each state transition, mock Z-API calls
 - [ ] Tests: integration test for full onboarding sequence
 
 ---
