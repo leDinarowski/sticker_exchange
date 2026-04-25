@@ -88,6 +88,29 @@ if (phone) id.phone = phone;
 
 ---
 
+## 2026-04-25 — Webhook 401: Z-API uses `z-api-token` header, not `client-token`
+
+**Hypothesis / Question:** Why does every Z-API webhook request return 401 even after verifying env vars are set?
+
+**Observation:**
+Inspecting the actual Z-API webhook via webhook.site revealed two bugs written against incorrect assumptions about Z-API's protocol:
+
+1. **Wrong auth header**: The webhook handler checked `req.headers['client-token']`, but Z-API never sends that header on incoming webhooks. Z-API sends `z-api-token: <ZAPI_TOKEN_VALUE>`. The `Client-Token` mentioned in Z-API's "Segurança" page is a token WE send in headers when calling Z-API's API — not what Z-API sends us. The webhook auth now checks `z-api-token` against `ZAPI_TOKEN`.
+
+2. **Flat payload, not nested**: The Zod schema and all handlers assumed Z-API wraps `messageId`, `fromMe`, `text`, `location`, etc. inside a nested `message` object. The actual payload is flat — all fields are at the root level alongside `type`, `phone`, and `instanceId`. Every incoming message was silently dropped at the parse step (`webhook_parse_failed` warn log) even if auth had passed.
+
+The root cause of both bugs: Z-API was integrated without testing against the real webhook format. The `ZApiWebhookPayload` interface in `src/types/index.ts` was written speculatively using a nested structure that does not match Z-API's actual REST contract.
+
+**Impact:** Entire Phase 1 flow was unreachable in production. No users could be created, no onboarding messages sent.
+
+**Action:**
+- `api/webhook.ts`: check `z-api-token` header against `ZAPI_TOKEN`.
+- `src/webhook/schema.ts`: flattened to match real Z-API payload.
+- All handlers and tests updated accordingly.
+- Rule going forward: for any new Z-API webhook event type, capture a real sample via webhook.site before writing the schema. Never write a schema against documentation alone.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
