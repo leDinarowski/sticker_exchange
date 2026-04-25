@@ -73,6 +73,21 @@ if (phone) id.phone = phone;
 
 ---
 
+## 2026-04-25 — Vercel env vars lost between deployments; preview requires branch-scoped vars
+
+**Hypothesis / Question:** Will env vars set during Phase 0 (via Vercel dashboard) persist for all future deployments, including preview branches?
+
+**Observation:** No. Env vars were wiped — "No Environment Variables found" — even though the Phase 0 health check had confirmed them. Root cause unknown (likely a project re-link or dashboard reset). Additionally, Vercel CLI v6+ requires `--value <v>` AND an explicit branch for preview-scoped vars: `vercel env add KEY preview feat/branch --value VALUE --yes`. Omitting the branch produces an interactive prompt that blocks scripted adds.
+
+**Impact:** All preview (feature branch) and production deployments failed at startup with `Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY`.
+
+**Action:**
+1. All vars re-added: 10 to `Production`, 10 to `Preview (feat/onboarding)`.
+2. Future branches: run `vercel env add KEY preview <branch> --value VALUE --yes` for each new feature branch OR promote vars to all-preview after confirming the CLI syntax.
+3. Add env var check to the PR checklist: confirm `vercel env ls` shows all required vars for the target environment before merging.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
