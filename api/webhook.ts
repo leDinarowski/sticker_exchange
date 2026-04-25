@@ -14,7 +14,17 @@ export default async function handler(
   }
 
   const clientToken = req.headers['client-token'];
-  if (clientToken !== process.env['ZAPI_SECURITY_TOKEN']) {
+  const expectedToken = process.env['ZAPI_SECURITY_TOKEN'];
+  // DEBUG — remove before merging to main
+  logger.info({
+    event: 'webhook_auth_debug',
+    hasClientToken: clientToken !== undefined,
+    clientTokenLength: typeof clientToken === 'string' ? clientToken.length : 0,
+    hasExpectedToken: expectedToken !== undefined,
+    expectedTokenLength: expectedToken?.length ?? 0,
+    allHeaders: Object.keys(req.headers),
+  });
+  if (clientToken !== expectedToken) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
