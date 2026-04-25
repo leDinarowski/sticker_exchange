@@ -90,13 +90,10 @@ export interface ZApiWebhookPayload {
   type: string;
   phone: string;
   instanceId: string;
-  message: {
-    messageId: string;
-    fromMe: boolean;
-    type: 'text' | 'buttonsResponseMessage' | 'listResponseMessage' | 'locationMessage' | 'imageMessage' | 'audioMessage';
-    text?: { message: string };
-    buttonsResponseMessage?: { selectedButtonId: string };
-    listResponseMessage?: { selectedRowId: string };
-    location?: { latitude: number; longitude: number };
-  };
+  messageId: string;
+  fromMe: boolean;
+  text?: { message: string };
+  buttonsResponseMessage?: { selectedButtonId: string };
+  listResponseMessage?: { selectedRowId: string };
+  location?: { latitude: number; longitude: number };
 }

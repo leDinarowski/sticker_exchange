@@ -16,7 +16,7 @@ export async function route(
   identifier: UserIdentifier,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  if (payload.message.fromMe) return ok(undefined);
+  if (payload.fromMe) return ok(undefined);
 
   const phone = identifier.phone ?? identifier.waUsername ?? '';
 

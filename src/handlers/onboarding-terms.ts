@@ -9,7 +9,7 @@ export async function handleOnboardingTerms(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const buttonId = payload.message.buttonsResponseMessage?.selectedButtonId;
+  const buttonId = payload.buttonsResponseMessage?.selectedButtonId;
 
   if (buttonId === 'terms_accept') {
     const consentResult = await recordConsent(user.id);

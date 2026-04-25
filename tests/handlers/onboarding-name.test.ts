@@ -39,12 +39,9 @@ function makePayload(text: string): WebhookPayload {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
-    message: {
-      messageId: 'msg-1',
-      fromMe: false,
-      type: 'text' as const,
-      text: { message: text },
-    },
+    messageId: 'msg-1',
+    fromMe: false,
+    text: { message: text },
   };
 }
 

@@ -11,7 +11,7 @@ export async function handleOnboardingName(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const raw = payload.message.text?.message ?? '';
+  const raw = payload.text?.message ?? '';
   const name = raw.trim();
   const retryCount = user.conversation_state?.context.retry_count ?? 0;
 

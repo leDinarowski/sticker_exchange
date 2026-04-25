@@ -10,14 +10,14 @@ export async function handleOnboardingLocation(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  if (payload.message.type !== 'locationMessage' || !payload.message.location) {
+  if (!payload.location) {
     return sendText(
       user.phone,
       'Use o botao de localizacao do WhatsApp para compartilhar sua localizacao.'
     );
   }
 
-  const { latitude, longitude } = payload.message.location;
+  const { latitude, longitude } = payload.location;
 
   const locationResult = await saveUserLocation(user.id, latitude, longitude);
   if (locationResult.isErr()) return locationResult;

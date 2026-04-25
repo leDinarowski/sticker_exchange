@@ -33,17 +33,14 @@ import * as idleHandler from '../../src/handlers/idle.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
-function makePayload(type: WebhookPayload['message']['type'] = 'text'): WebhookPayload {
+function makePayload(): WebhookPayload {
   return {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
-    message: {
-      messageId: 'msg-1',
-      fromMe: false,
-      type,
-      text: type === 'text' ? { message: 'Oi' } : undefined,
-    },
+    messageId: 'msg-1',
+    fromMe: false,
+    text: { message: 'Oi' },
   };
 }
 
@@ -66,7 +63,7 @@ beforeEach(() => vi.clearAllMocks());
 describe('router', () => {
   it('ignores messages from the bot itself (fromMe=true)', async () => {
     const payload = makePayload();
-    payload.message.fromMe = true;
+    payload.fromMe = true;
 
     const result = await route(null, { phone: '5511999999999' }, payload);
 

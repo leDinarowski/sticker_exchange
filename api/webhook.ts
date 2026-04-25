@@ -13,8 +13,8 @@ export default async function handler(
     return;
   }
 
-  const clientToken = req.headers['client-token'];
-  if (clientToken !== process.env['ZAPI_SECURITY_TOKEN']) {
+  const zapiToken = req.headers['z-api-token'];
+  if (zapiToken !== process.env['ZAPI_TOKEN']) {
     res.status(401).json({ error: 'Unauthorized' });
     return;
   }
@@ -40,12 +40,6 @@ export default async function handler(
   }
 
   const user = userResult.value;
-
-  logger.info({
-    userId: user?.id ?? 'unknown',
-    messageType: payload.message.type,
-    event: 'webhook_routed',
-  });
 
   const routeResult = await route(user, identifier, payload);
   if (routeResult.isErr()) {
