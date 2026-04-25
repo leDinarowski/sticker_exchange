@@ -7,7 +7,7 @@
     "dev": "tsx watch src/index.ts",
     "build": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src tests --ext .ts",
+    "lint": "eslint src tests",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -19,6 +19,7 @@
   },
   "author": "",
   "license": "ISC",
+  "type": "module",
   "engines": {
     "node": "20.x"
   },
