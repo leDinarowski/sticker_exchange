@@ -28,6 +28,21 @@ This document captures real observations from building and running the system. I
 
 ---
 
+## 2026-04-25 — ESLint v9 flat config: three silent failures discovered during CI setup
+
+**Hypothesis / Question:** Were the linting and test scripts set up correctly after Phase 0 scaffolding?
+
+**Observation:**
+- `npm run lint` was silently broken from day one: the `--ext .ts` flag was removed in ESLint v9 flat config mode and causes a fatal error before any file is linted. The error was only surfaced when CI was configured and the commands were run end-to-end.
+- `parserOptions.project` in `eslint.config.js` caused a parse error for `tests/` files because they are excluded from `tsconfig.json`'s `include`. It is only needed when type-aware rules (`recommended-type-checked`) are active — the current rule set does not require it.
+- Base ESLint rules `no-undef` and `no-redeclare` fire false positives on TypeScript: `process` is flagged as undefined (TypeScript handles globals), and the `const Foo = {} as const / type Foo = ...` declaration-merging pattern is flagged as a redeclaration. Both rules should be disabled for TypeScript files.
+
+**Impact:** No architectural decisions changed. Fixes documented in ADR-013.
+
+**Action:** All three issues fixed in `chore/ci`. Pattern to remember: after any ESLint major version upgrade, verify `--ext` is absent, confirm `parserOptions.project` is only present when type-aware rules are in use, and disable `no-undef` / `no-redeclare` for TypeScript file globs.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

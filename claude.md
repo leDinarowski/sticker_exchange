@@ -18,6 +18,24 @@
 | Validation | Zod | All external inputs must be validated |
 | Testing | Vitest | One test file per feature module |
 
+## Before Starting Any Task
+
+Read these files before planning or writing code — not after:
+
+1. **`decisions.md`** — past architectural choices. Never re-litigate an accepted ADR without a concrete new reason.
+2. **`learnings.md`** — experiment results and known gotchas. Check the section relevant to the area you're touching.
+3. **`architecture.md`** — data flows, SQL query patterns, and the component diagram. Read before touching anything in the data layer or state machine.
+4. **Relevant skill guide in `.claude/skills/`** — listed below. Read before implementing the corresponding feature area.
+
+Available skills:
+- `whatsapp-flow` — Z-API call patterns, button message constraints, copy rules
+- `state-machine` — state enum, JSONB schema, transition rules, how to add a handler
+- `lgpd` — consent recording, PII fields, bilateral consent flow
+- `listing-parser` — input formats, range parsing, echo-back, validation rules
+- `geospatial` — H3 snapping, ST_DWithin patterns, index requirements
+
+5. **`roadmap.md`** — phase sequencing and inter-phase dependencies. Check when scope is unclear.
+
 ## Repository Rules
 
 - **Never commit directly to `main`.** Every change goes through a feature branch + PR.
@@ -30,8 +48,10 @@
 
 ```
 sticker_exchange/
+├── api/                  # Vercel serverless entry points (one file = one route)
+│   ├── webhook.ts        # POST /api/webhook — receives all Z-API events
+│   └── health.ts         # GET  /api/health  — Supabase connectivity check
 ├── src/
-│   ├── webhook/          # Vercel API route — receives WhatsApp events
 │   ├── handlers/         # One handler per conversation intent
 │   ├── services/         # Business logic (matching, location, listings)
 │   ├── db/               # Supabase queries (typed)
@@ -41,9 +61,10 @@ sticker_exchange/
 ├── tests/
 │   └── <feature>/        # Mirror of src/ structure
 ├── supabase/
-│   └── migrations/       # SQL migration files
+│   └── migrations/       # SQL migration files — never modify existing files
 ├── .claude/
 │   └── skills/           # Project-specific AI agent skill guides
+├── public/               # Required by Vercel for API-only deployments
 ├── .env.example
 ├── vercel.json
 └── package.json
@@ -53,6 +74,12 @@ sticker_exchange/
 
 Always check `.env.example` for the full list. Never hardcode secrets. Never commit `.env`.
 Always use the Supabase **connection pooler URL** (`SUPABASE_DB_POOLER_URL`), not the direct DB URL, for all Vercel function connections.
+
+## Database Migrations
+
+- **Never modify an existing migration file.** Always create a new one.
+- Naming: `YYYYMMDDHHmmss_<slug>.sql` — use `npm run migrate` to apply.
+- Every schema change (new column, new index, drop) requires its own migration file.
 
 ## Coding Conventions
 
@@ -116,6 +143,12 @@ The engine is domain-agnostic. Domain-specific data is stored in `listings` and 
 - Add an ADR when: choosing between approaches with trade-offs, discovering a non-obvious bug or incompatibility, or making a decision that would surprise a future reader.
 - Follow the existing ADR format: Status, Date, Context, Decision, Rationale.
 - Routine implementation details (adding a field, writing a handler) do not need an ADR.
+
+## Learnings
+
+- When an experiment completes, a surprise occurs, an assumption is invalidated, or a non-obvious bug is fixed — add an entry to `learnings.md`.
+- Follow the existing format: Hypothesis / Question → Observation → Impact → Action.
+- Link to the relevant ADR if the learning changes or confirms a past decision.
 
 ## Commands
 
