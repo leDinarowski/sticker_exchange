@@ -294,3 +294,39 @@ User locations become stale when users move. Auto-detecting movement is not feas
 - User-initiated updates cover intentional moves (neighborhood change, attending an event).
 - Weekly nudge catches forgetful users without being intrusive.
 - Both mechanisms together provide sufficient freshness for the proximity use case.
+
+---
+
+## ADR-013: CI — GitHub Actions + ESLint v9 Flat Config Gotchas
+
+**Status:** Accepted
+**Date:** 2026-04-25
+
+### Context
+Setting up GitHub Actions CI (`typecheck → lint → test`) surfaced several pre-existing issues in the ESLint configuration that had been silently masked by a broken lint script.
+
+### Decision
+Single-job workflow (typecheck → lint → test sequentially) using `actions/setup-node@v4` with `cache: 'npm'`. Three ESLint configuration fixes applied alongside.
+
+### Rationale & Gotchas
+
+**`--ext` flag removed from lint script**
+ESLint v9 flat config does not support `--ext`. Passing it produces a fatal error and the linter never runs. Extension filtering is handled by the `files` glob in `eslint.config.js` instead.
+
+**`parserOptions.project` removed**
+`parserOptions.project` causes a parse error for any file not listed in `tsconfig.json`'s `include` (e.g. `tests/`). It is only needed when type-aware lint rules are active. The current rule set uses `recommended` (not `recommended-type-checked`), so no rule requires it. Remove it unless type-aware rules are explicitly added.
+
+**`no-undef: 'off'` for TypeScript files**
+The base `no-undef` rule fires false positives on Node.js built-ins (`process`, `Buffer`, etc.) in TypeScript source. TypeScript's own compiler catches undefined globals — `no-undef` is redundant and noisy in TS files.
+
+**`no-redeclare: 'off'` for TypeScript files**
+The base `no-redeclare` rule fires on the standard TypeScript `const Foo = {} as const / type Foo = ...` pattern (declaration merging across value and type namespaces). TypeScript itself enforces redeclaration rules correctly.
+
+**`"type": "module"` in package.json**
+`eslint.config.js` uses `import.meta.dirname`, which is valid only in ES modules. Without `"type": "module"`, Node.js emits a performance warning and re-parses the file as ESM. Adding `"type": "module"` makes the project's module format explicit.
+
+### CI Workflow Structure
+- Trigger: `pull_request` (any branch) + `push` to `main`
+- One job, sequential steps — avoids per-job checkout/install overhead which outweighs any parallelism benefit at this project size
+- `npm ci` (not `npm install`) — deterministic, errors if lockfile is out of sync
+- Step order: typecheck → lint → test (cheapest gate first)
