@@ -10,19 +10,19 @@
 
 ## Phase 0 — Infrastructure & Scaffolding
 
-- [ ] Initialize TypeScript project (`tsconfig.json`, `package.json`, ESLint, Prettier)
-- [ ] Set up Vitest for testing
-- [ ] Set up Pino logger with structured JSON output
-- [ ] Create Supabase project + enable PostGIS extension
-- [ ] Write first migration: `users`, `listings`, `wanted_listings`, `matches` tables + GIST index
-- [ ] Add `wa_username` nullable column to `users` in first migration
-- [ ] Configure Supabase connection pooler — use `SUPABASE_DB_POOLER_URL` everywhere
+- [DONE — 2026-04-24] Initialize TypeScript project (`tsconfig.json`, `package.json`, ESLint) — Prettier not configured yet
+- [DONE — 2026-04-24] Set up Vitest for testing
+- [DONE — 2026-04-24] Set up Pino logger with structured JSON output
+- [DONE — 2026-04-24] Create Supabase project + enable PostGIS extension
+- [DONE — 2026-04-24] Write first migration: `users`, `listings`, `wanted_listings`, `matches` tables + GIST index
+- [DONE — 2026-04-24] Add `wa_username` nullable column to `users` in first migration
+- [DONE — 2026-04-24] Configure Supabase connection pooler — `SUPABASE_DB_POOLER_URL` in `.env.example` + documented in CLAUDE.md
+- [DONE — 2026-04-24] Create Vercel project + link to repo + add all env vars (`/api/health` returns 200)
 - [ ] Set up Z-API account + connect dedicated WhatsApp number
-- [ ] Create Vercel project + link to repo + add all env vars
 - [ ] Configure Z-API webhook URL → Vercel `/api/webhook`
 - [ ] Smoke test: send any message to bot number, confirm webhook fires and Vercel receives it
-- [ ] Set up GitHub repo with branch protection on `main` (require PR + passing CI)
-- [ ] Set up GitHub Actions CI: `npm run typecheck && npm run lint && npm test`
+- [DONE — 2026-04-24] Set up GitHub repo with branch protection on `main` (require PR + passing CI)
+- [DONE — 2026-04-25] Set up GitHub Actions CI: `npm run typecheck && npm run lint && npm test`
 
 ---
 
