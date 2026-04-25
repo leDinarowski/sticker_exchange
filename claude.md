@@ -110,6 +110,13 @@ The engine is domain-agnostic. Domain-specific data is stored in `listings` and 
 - Never leave a completed item as `[ ]`.
 - Never delete items — move them to DONE with the date.
 
+## Architecture Decisions & Gotchas
+
+- All non-obvious architectural decisions and tooling gotchas go in `decisions.md` as a new ADR.
+- Add an ADR when: choosing between approaches with trade-offs, discovering a non-obvious bug or incompatibility, or making a decision that would surprise a future reader.
+- Follow the existing ADR format: Status, Date, Context, Decision, Rationale.
+- Routine implementation details (adding a field, writing a handler) do not need an ADR.
+
 ## Commands
 
 ```bash
