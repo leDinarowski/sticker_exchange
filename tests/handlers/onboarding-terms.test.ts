@@ -34,12 +34,9 @@ function makePayload(buttonId?: string): WebhookPayload {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
-    message: {
-      messageId: 'msg-1',
-      fromMe: false,
-      type: 'buttonsResponseMessage' as const,
-      buttonsResponseMessage: buttonId ? { selectedButtonId: buttonId } : undefined,
-    },
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: buttonId ? { selectedButtonId: buttonId } : undefined,
   };
 }
 

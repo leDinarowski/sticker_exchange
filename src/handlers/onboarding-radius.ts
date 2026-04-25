@@ -15,7 +15,7 @@ export async function handleOnboardingRadius(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const buttonId = payload.message.buttonsResponseMessage?.selectedButtonId ?? '';
+  const buttonId = payload.buttonsResponseMessage?.selectedButtonId ?? '';
   const radiusKm = RADIUS_MAP[buttonId];
 
   if (radiusKm === undefined) {

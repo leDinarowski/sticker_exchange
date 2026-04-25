@@ -36,12 +36,9 @@ function makeLocationPayload(lat: number, lng: number): WebhookPayload {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
-    message: {
-      messageId: 'msg-1',
-      fromMe: false,
-      type: 'locationMessage' as const,
-      location: { latitude: lat, longitude: lng },
-    },
+    messageId: 'msg-1',
+    fromMe: false,
+    location: { latitude: lat, longitude: lng },
   };
 }
 
@@ -50,12 +47,9 @@ function makeTextPayload(): WebhookPayload {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
-    message: {
-      messageId: 'msg-1',
-      fromMe: false,
-      type: 'text' as const,
-      text: { message: 'Sao Paulo' },
-    },
+    messageId: 'msg-1',
+    fromMe: false,
+    text: { message: 'Sao Paulo' },
   };
 }
 
