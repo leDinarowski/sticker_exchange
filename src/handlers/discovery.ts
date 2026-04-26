@@ -1,7 +1,8 @@
 import { Result, err } from 'neverthrow';
 import { logger } from '../utils/logger.js';
-import { transitionState } from '../db/users.js';
+import { transitionState, findUserById } from '../db/users.js';
 import { findNearbyUsers } from '../db/discovery.js';
+import { createMatch } from '../db/matches.js';
 import {
   formatDiscoveryList,
   formatBilateralList,
@@ -134,14 +135,47 @@ async function handleActionSelection(
     return sendText(phone, getListFormatter(ctx.mode)(list));
   }
 
-  // Contact stub — Phase 6 will replace this
-  const transitionResult = await transitionState(user.id, ConversationStep.IDLE);
-  if (transitionResult.isErr()) return transitionResult;
+  const contactTargets = indices
+    .filter(i => i !== voltarIndex)
+    .map(i => selected[i - 1])
+    .filter((e): e is DiscoveryEntry => e !== undefined);
 
-  logger.info({ userId: user.id, event: 'discovery_contact_stub', targets: indices });
+  const matchIds: string[] = [];
 
-  const sendResult = await sendText(phone, 'Funcionalidade em breve.');
-  if (sendResult.isErr()) return sendResult;
+  for (const target of contactTargets) {
+    const matchResult = await createMatch(user.id, target.user_id);
+    if (matchResult.isErr()) return err(matchResult.error);
+    const match = matchResult.value;
+    matchIds.push(match.id);
 
-  return showMainMenu(user.id, phone);
+    const userBResult = await findUserById(target.user_id);
+    if (userBResult.isErr()) return err(userBResult.error);
+    const userB = userBResult.value;
+    if (!userB) continue;
+
+    const tB = await transitionState(userB.id, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: match.id,
+      pending_target_name: user.name ?? 'Alguem',
+    });
+    if (tB.isErr()) return tB;
+
+    const notifyB = await sendButtons(
+      userB.phone,
+      `${user.name ?? 'Alguem'} quer trocar figurinhas com voce. Aceita?`,
+      [
+        { id: `match_accept_${match.id}`, label: 'Sim' },
+        { id: `match_decline_${match.id}`, label: 'Nao' },
+      ]
+    );
+    if (notifyB.isErr()) return notifyB;
+  }
+
+  const tA = await transitionState(user.id, ConversationStep.AWAITING_MATCH_RESPONSE, {
+    pending_match_ids: matchIds,
+  });
+  if (tA.isErr()) return tA;
+
+  const names = contactTargets.map(t => t.name).join(', ');
+  logger.info({ userId: user.id, event: 'connection_initiated', matchCount: matchIds.length });
+  return sendText(phone, `Pedido enviado para ${names}. Voce sera avisado quando responderem.`);
 }

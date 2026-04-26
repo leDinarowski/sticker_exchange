@@ -13,6 +13,7 @@ import { showMainMenu } from '../handlers/idle.js';
 import { handleUpdateLocation } from '../handlers/update-location.js';
 import { handleDiscovery, handleBrowsing } from '../handlers/discovery.js';
 import { handleBilateral } from '../handlers/bilateral.js';
+import { handleAwaitingMatchResponse } from '../handlers/connection-response.js';
 
 const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '1': 'discovery',
@@ -46,6 +47,12 @@ export async function route(
   const step = user.conversation_state?.step ?? ConversationStep.NEW;
   logger.info({ userId: user.id, step, event: 'routing' });
 
+  // Match-button intercept: handle regardless of user's current state (paid account real buttons)
+  const anyButtonId = payload.buttonsResponseMessage?.selectedButtonId;
+  if (anyButtonId?.startsWith('match_accept_') || anyButtonId?.startsWith('match_decline_')) {
+    return handleAwaitingMatchResponse(user, payload, phone);
+  }
+
   switch (step) {
     case ConversationStep.ONBOARDING_NAME:
       return handleOnboardingName(user, payload);
@@ -78,8 +85,10 @@ export async function route(
     case ConversationStep.BROWSING:
       return handleBrowsing(user, payload, phone);
 
-    case ConversationStep.CONFIRMING_INVENTORY:
     case ConversationStep.AWAITING_MATCH_RESPONSE:
+      return handleAwaitingMatchResponse(user, payload, phone);
+
+    case ConversationStep.CONFIRMING_INVENTORY:
       return showMainMenu(user.id, phone);
 
     case ConversationStep.NEW:

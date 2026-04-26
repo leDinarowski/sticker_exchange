@@ -3,9 +3,13 @@ import { ok, err } from 'neverthrow';
 
 vi.mock('../../src/db/users.js', () => ({
   transitionState: vi.fn(),
+  findUserById: vi.fn(),
 }));
 vi.mock('../../src/db/discovery.js', () => ({
   findNearbyUsers: vi.fn(),
+}));
+vi.mock('../../src/db/matches.js', () => ({
+  createMatch: vi.fn(),
 }));
 vi.mock('../../src/services/zapi.js', () => ({
   sendText: vi.fn(),
@@ -18,9 +22,10 @@ vi.mock('../../src/handlers/idle.js', () => ({
 import { handleDiscovery, handleBrowsing } from '../../src/handlers/discovery.js';
 import * as db from '../../src/db/users.js';
 import * as discoveryDb from '../../src/db/discovery.js';
+import * as matchesDb from '../../src/db/matches.js';
 import * as zapi from '../../src/services/zapi.js';
 import * as idleHandler from '../../src/handlers/idle.js';
-import { ConversationStep, DiscoveryEntry, User } from '../../src/types/index.js';
+import { ConversationStep, DiscoveryEntry, Match, MatchStatus, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
 const SAMPLE_ENTRIES: DiscoveryEntry[] = [
@@ -190,10 +195,32 @@ describe('handleBrowsing — action selection (with selected_indices)', () => {
     );
   });
 
-  it('contact stub: transitions to IDLE and shows main menu', async () => {
+  it('contact: creates match, notifies User B, transitions User A to AWAITING_MATCH_RESPONSE', async () => {
+    const fakeMatch: Match = {
+      id: 'match-123',
+      user_a_id: 'uuid-me',
+      user_b_id: 'uuid-a',
+      status: MatchStatus.PENDING,
+      created_at: '',
+      expires_at: new Date(Date.now() + 86_400_000).toISOString(),
+    };
+    const userB: User = {
+      id: 'uuid-a',
+      phone: '5511000000001',
+      wa_username: null,
+      name: 'Joao',
+      radius_km: 3,
+      conversation_state: { step: ConversationStep.IDLE, context: {}, updated_at: '' },
+      consented_at: '',
+      refused_at: null,
+      created_at: '',
+    };
+
+    vi.mocked(matchesDb.createMatch).mockResolvedValue(ok(fakeMatch));
+    vi.mocked(db.findUserById).mockResolvedValue(ok(userB));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
 
     const ctx = {
       mode: 'discovery' as const,
@@ -205,9 +232,39 @@ describe('handleBrowsing — action selection (with selected_indices)', () => {
     const result = await handleBrowsing(user, makeTextPayload('1'), '5511999999999');
 
     expect(result.isOk()).toBe(true);
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-me', ConversationStep.IDLE);
-    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('breve'));
-    expect(idleHandler.showMainMenu).toHaveBeenCalled();
+
+    // Match created with correct users
+    expect(matchesDb.createMatch).toHaveBeenCalledWith('uuid-me', 'uuid-a');
+
+    // User B transitioned to AWAITING_MATCH_RESPONSE (respondent)
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-a',
+      ConversationStep.AWAITING_MATCH_RESPONSE,
+      expect.objectContaining({ pending_match_id: 'match-123' })
+    );
+
+    // User B notified with accept/decline buttons
+    expect(zapi.sendButtons).toHaveBeenCalledWith(
+      '5511000000001',
+      expect.stringContaining('quer trocar'),
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'match_accept_match-123' }),
+        expect.objectContaining({ id: 'match_decline_match-123' }),
+      ])
+    );
+
+    // User A transitioned to AWAITING_MATCH_RESPONSE (initiator)
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-me',
+      ConversationStep.AWAITING_MATCH_RESPONSE,
+      expect.objectContaining({ pending_match_ids: ['match-123'] })
+    );
+
+    // User A notified
+    expect(zapi.sendText).toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('Pedido enviado')
+    );
   });
 
   it('re-sends profile on invalid action input', async () => {

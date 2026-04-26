@@ -467,3 +467,57 @@ Use **Option B**: a Supabase RPC function `find_nearby_users_for(p_user_id, p_do
 ### Consequences
 - Adding user-specific radius overrides or per-query radius parameters requires modifying the SQL function, not the application code.
 - The function must be updated if the `users` location or radius column names change.
+
+---
+
+## ADR-019: Connection Flow — Match Button Intercept Before State Dispatch
+
+**Status:** Accepted
+**Date:** 2026-04-26
+
+### Context
+When User B receives a match request notification, they tap [Sim] or [Nao]. User B may be in any conversation state (IDLE, BROWSING, etc.) when they tap. The router dispatches handlers by `conversation_state.step`. If User B is in BROWSING state and taps a match button, the normal dispatch would route their response to `handleBrowsing`, which ignores button IDs and re-shows the discovery list — the match response gets silently dropped.
+
+On the paid Z-API account (button messages enabled), `buttonsResponseMessage.selectedButtonId` encodes the match ID: `match_accept_<uuid>` or `match_decline_<uuid>`.
+
+### Decision
+Check for `match_accept_*` / `match_decline_*` button IDs **before** the step-based switch statement in the router. If found, route to `handleAwaitingMatchResponse` regardless of the user's current state.
+
+### Rationale
+- Guarantees correct handling of match responses from any conversation state.
+- The button ID uniquely identifies the match to act on — no state context is needed to resolve the match.
+- For the trial account (text fallback), User B's state is set to `AWAITING_MATCH_RESPONSE` (respondent role) when the notification is sent, so text responses "1"/"2" are handled by the state-based dispatch without needing the intercept.
+
+### Consequences
+- Any button whose ID starts with `match_accept_` or `match_decline_` will be intercepted. Button IDs for other features must not use these prefixes.
+- The intercept only applies when `buttonsResponseMessage` is present; text input is still routed by state.
+
+---
+
+## ADR-020: AWAITING_MATCH_RESPONSE Reused for Both Initiator and Respondent Roles
+
+**Status:** Accepted
+**Date:** 2026-04-26
+
+### Context
+Phase 6 introduces two distinct "waiting" behaviors in the connection flow:
+- **User A (initiator)**: sent the request, waiting for User B's answer.
+- **User B (respondent)**: received a request, must tap [Sim] or [Nao].
+
+Two options:
+- Option A: Add a new `AWAITING_MATCH_RESPONSE_B` state for the respondent role.
+- Option B: Reuse the existing `AWAITING_MATCH_RESPONSE` state for both roles, distinguished by context.
+
+### Decision
+Use **Option B**: `AWAITING_MATCH_RESPONSE` serves both roles. The handler dispatches on `ctx.pending_match_id`:
+- Present → respondent role (User B): parse "1"/"2" or button ID as accept/decline.
+- Absent → initiator role (User A): query pending matches, show "Ainda aguardando..." or handle expiry.
+
+### Rationale
+- Consistent with ADR-016 and ADR-017: context flags for sub-state variation; new enum values only for states with distinct UX identity.
+- The two roles share the same state name because they resolve through the same event (User B's reply). Splitting them adds a state enum value with no real UX distinction.
+- The trial-account text fallback (User B sends "1" or "2") works cleanly: User B is in `AWAITING_MATCH_RESPONSE` so the router dispatches their text input to the connection response handler, not to the IDLE handler.
+
+### Consequences
+- `ctx.pending_match_id` (singular) signals respondent role; `ctx.pending_match_ids` (array) signals initiator role.
+- A user cannot be simultaneously in both roles within the same state invocation — if they receive a new match request while already in initiator role, the newer request overwrites their context. Acceptable for MVP.
