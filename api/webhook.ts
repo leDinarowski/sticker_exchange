@@ -19,11 +19,10 @@ export default async function handler(
     return;
   }
 
-  res.status(200).json({ ok: true });
-
   const parsed = webhookPayloadSchema.safeParse(req.body);
   if (!parsed.success) {
     logger.warn({ event: 'webhook_parse_failed', issues: parsed.error.issues.length });
+    res.status(200).json({ ok: true });
     return;
   }
 
@@ -36,6 +35,7 @@ export default async function handler(
   const userResult = await findUser(identifier);
   if (userResult.isErr()) {
     logger.error({ event: 'find_user_failed', error: userResult.error.message });
+    res.status(200).json({ ok: true });
     return;
   }
 
@@ -45,4 +45,6 @@ export default async function handler(
   if (routeResult.isErr()) {
     logger.error({ userId: user?.id ?? 'unknown', event: 'route_error', error: routeResult.error.message });
   }
+
+  res.status(200).json({ ok: true });
 }
