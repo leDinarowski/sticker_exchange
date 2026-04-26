@@ -98,12 +98,19 @@ export async function createGroup(
   participants: string[]
 ): Promise<Result<string, Error>> {
   logger.info({ event: 'zapi_send', type: 'create_group', count: participants.length });
-  const result = await zapiPostData<{ phone: string }>('create-group', {
+  const result = await zapiPostData<Record<string, unknown>>('create-group', {
+    autoInvite: true,
     groupName: name,
     phones: participants,
   });
   if (result.isErr()) return err(result.error);
-  return ok(result.value.phone);
+  // Log full response so we can confirm the group phone field name
+  logger.info({ event: 'zapi_create_group_response', body: result.value });
+  const groupPhone = (result.value['phone'] ?? result.value['groupPhone'] ?? result.value['id']) as string | undefined;
+  if (!groupPhone) {
+    return err(new Error(`create-group returned no phone field: ${JSON.stringify(result.value)}`));
+  }
+  return ok(groupPhone);
 }
 
 // TEMP: list messages require Z-API beta toggle (unavailable on trial).
