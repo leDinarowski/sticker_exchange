@@ -25,11 +25,15 @@ vi.mock('../../src/handlers/onboarding-listings.js', () => ({
 vi.mock('../../src/handlers/idle.js', () => ({
   showMainMenu: vi.fn(),
 }));
+vi.mock('../../src/handlers/update-location.js', () => ({
+  handleUpdateLocation: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';
 import * as nameHandler from '../../src/handlers/onboarding-name.js';
 import * as idleHandler from '../../src/handlers/idle.js';
+import * as updateLocationHandler from '../../src/handlers/update-location.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -98,6 +102,62 @@ describe('router', () => {
 
     expect(result.isOk()).toBe(true);
     expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
+  });
+
+  it('routes IDLE + text "4" to handleUpdateLocation', async () => {
+    vi.mocked(updateLocationHandler.handleUpdateLocation).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      text: { message: '4' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(updateLocationHandler.handleUpdateLocation).toHaveBeenCalledWith(user, '5511999999999');
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
+  });
+
+  it('routes IDLE + listResponseMessage selectedRowId "update_location" to handleUpdateLocation', async () => {
+    vi.mocked(updateLocationHandler.handleUpdateLocation).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      listResponseMessage: { selectedRowId: 'update_location' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(updateLocationHandler.handleUpdateLocation).toHaveBeenCalledWith(user, '5511999999999');
+  });
+
+  it('shows main menu for IDLE with unrecognised input', async () => {
+    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      text: { message: 'Oi' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
+    expect(updateLocationHandler.handleUpdateLocation).not.toHaveBeenCalled();
   });
 
   it('shows main menu for unknown state (fallback)', async () => {

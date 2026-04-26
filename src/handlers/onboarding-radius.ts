@@ -4,6 +4,7 @@ import { transitionState, updateUserRadius } from '../db/users.js';
 import { ConversationStep, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { showMainMenu } from './idle.js';
 
 const RADIUS_MAP: Record<string, number> = {
   r1: 1,
@@ -42,6 +43,20 @@ export async function handleOnboardingRadius(
 
   const radiusResult = await updateUserRadius(user.id, radiusKm);
   if (radiusResult.isErr()) return radiusResult;
+
+  const updatingLocation = user.conversation_state?.context?.updating_location === true;
+
+  if (updatingLocation) {
+    const transitionResult = await transitionState(user.id, ConversationStep.IDLE);
+    if (transitionResult.isErr()) return transitionResult;
+
+    logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.IDLE, context: 'update' });
+
+    const sendResult = await sendText(user.phone, 'Localizacao e raio atualizados.');
+    if (sendResult.isErr()) return sendResult;
+
+    return showMainMenu(user.id, user.phone);
+  }
 
   const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS);
   if (transitionResult.isErr()) return transitionResult;

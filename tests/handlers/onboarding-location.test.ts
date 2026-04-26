@@ -65,7 +65,7 @@ describe('handleOnboardingLocation', () => {
 
     expect(result.isOk()).toBe(true);
     expect(locationService.saveUserLocation).toHaveBeenCalledWith('uuid-1', -23.55, -46.63);
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_RADIUS);
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_RADIUS, {});
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
       expect.stringContaining('raio'),
@@ -74,6 +74,29 @@ describe('handleOnboardingLocation', () => {
         expect.objectContaining({ id: 'r3' }),
         expect.objectContaining({ id: 'r5' }),
       ])
+    );
+  });
+
+  it('carries updating_location flag to ONBOARDING_RADIUS when set in context', async () => {
+    vi.mocked(locationService.saveUserLocation).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const userWithFlag: User = {
+      ...mockUser,
+      conversation_state: {
+        step: ConversationStep.ONBOARDING_LOCATION,
+        context: { updating_location: true },
+        updated_at: '',
+      },
+    };
+
+    await handleOnboardingLocation(userWithFlag, makeLocationPayload(-23.55, -46.63));
+
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_RADIUS,
+      { updating_location: true }
     );
   });
 
