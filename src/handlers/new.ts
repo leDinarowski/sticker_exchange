@@ -19,7 +19,7 @@ export async function handleNew(
 
   logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.ONBOARDING_NAME });
 
-  const sendResult = await sendText(phone, 'Bem-vindo ao sticker_exchange. Qual e o seu nome?');
+  const sendResult = await sendText(phone, 'Bem-vindo ao Trocar Figurinhas\nAntes de começarmos, qual é o seu nome?');
   if (sendResult.isErr()) return sendResult;
 
   return ok(undefined);
