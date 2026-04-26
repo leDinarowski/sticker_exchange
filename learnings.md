@@ -128,6 +128,30 @@ This is documented AWS Lambda behavior: "After the response has been sent, there
 
 ---
 
+## 2026-04-26 — Panini 2026 album uses alphanumeric codes, not sequential integers
+
+**Hypothesis / Question:** What is the correct sticker identification format for the Panini FIFA World Cup 2026™ album?
+
+**Observation:**
+The album does NOT use a sequential integer range (1–670 was the wrong assumption). The authoritative format is an alphanumeric code: 3-letter FIFA team prefix + position number (1–20 per team). Three series exist:
+- Teams (48 × 20): `ARG1`–`ARG20`, `BRA1`–`BRA20`, etc. — 960 stickers
+- FWC (tournament): `FWC00`, `FWC1`–`FWC19` — 20 stickers
+- CC (Coca-Cola promo): `CC1`–`CC14` — 14 stickers
+- Total for complete album: **994 stickers**
+
+The sticker_context.md file contains the complete reference including all 48 team codes grouped by confederation.
+
+**Impact:** The entire Phase 2 listing parser spec was wrong. The parser, validation rules, payload format (`{ "number": 45 }` → `{ "code": "BRA5" }`), DB queries, and all documentation had to be updated. No code was deleted since the parser was still a placeholder. See ADR-015.
+
+**Action:**
+- All docs updated: `decisions.md` (ADR-003, ADR-009, new ADR-015), `architecture.md`, `roadmap.md`, `TODO.md`, `claude.md`, `learnings.md`.
+- Skill file `.claude/skills/listing-parser/SKILL.md` completely rewritten for alphanumeric codes.
+- Skill file `.claude/skills/geospatial/SKILL.md` SQL updated (`payload->>'number'` → `payload->>'code'`).
+- One code change: `onboarding-radius.ts` listing prompt updated to show `BRA5, ARG3` example.
+- Rule: always read `stickers_context.md` before touching any listing/parser/payload code.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

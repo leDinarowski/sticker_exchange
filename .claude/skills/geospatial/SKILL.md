@@ -77,7 +77,7 @@ $$ LANGUAGE plpgsql;
 SELECT
   u.id,
   u.name,
-  json_agg(l.payload->>'number' ORDER BY (l.payload->>'number')::int) AS items,
+  json_agg(l.payload->>'code' ORDER BY l.payload->>'code') AS items,
   ST_Distance(u.location::geography, ST_SetSRID(ST_MakePoint($2, $1), 4326)::geography) AS dist_m
 FROM users u
 JOIN listings l ON l.user_id = u.id
@@ -116,14 +116,14 @@ JOIN listings they_have ON they_have.user_id = u.id
   AND they_have.expires_at > NOW()
 JOIN wanted_listings my_wants ON my_wants.user_id = $3
   AND my_wants.domain = 'sticker'
-  AND my_wants.payload->>'number' = they_have.payload->>'number'
+  AND my_wants.payload->>'code' = they_have.payload->>'code'
 -- I have something they want
 JOIN wanted_listings they_want ON they_want.user_id = u.id
   AND they_want.domain = 'sticker'
 JOIN listings i_have ON i_have.user_id = $3
   AND i_have.domain = 'sticker'
   AND i_have.expires_at > NOW()
-  AND i_have.payload->>'number' = they_want.payload->>'number'
+  AND i_have.payload->>'code' = they_want.payload->>'code'
 WHERE
   u.id != $3
   AND ST_DWithin(

@@ -74,7 +74,7 @@ CREATE TABLE listings (
   id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id     UUID REFERENCES users(id) ON DELETE CASCADE,
   domain      TEXT NOT NULL,           -- 'sticker', 'service', 'product', ...
-  payload     JSONB NOT NULL,          -- { "number": 45 } for stickers
+  payload     JSONB NOT NULL,          -- { "code": "BRA5" } for stickers
   expires_at  TIMESTAMPTZ,
   created_at  TIMESTAMPTZ DEFAULT NOW()
 );
@@ -90,7 +90,7 @@ CREATE TABLE wanted_listings (
 
 ### Rationale
 - Adding a new domain requires zero schema migration: add rows with a new `domain` value.
-- Sticker-specific logic (number range validation 1–670, parser) lives only in the sticker domain module.
+- Sticker-specific logic (alphanumeric code validation, parser) lives only in the sticker domain module.
 - Both tables are created from day one — retrofitting a generic model onto a sticker-specific schema later is expensive.
 
 ---
@@ -225,11 +225,12 @@ Stale listings degrade discovery board quality. 30-day expiry is too long — us
 - After a successful group creation (trade initiated), both users are immediately prompted to review their inventory.
 
 ### Listing Input Rules (enforced in parser)
-- Accepts ranges: "12-25" expands to 12,13,...,25.
-- Accepts comma-separated: "12, 45, 78".
-- Accepts differential: "remover 45, 78" or "adicionar 203".
-- After any full list submission, bot echoes parsed numbers for confirmation before saving.
-- Valid range for sticker domain: 1–670 (World Cup 2026 album).
+- Accepts alphanumeric sticker codes: "BRA5", "ARG3", "FWC8", "CC2".
+- Accepts ranges within a team: "BRA5-10" expands to BRA5, BRA6, …, BRA10.
+- Accepts comma-separated: "BRA5, ARG3, FWC8".
+- Accepts differential: "remover BRA5, ARG3" or "adicionar BRA5".
+- After any full list submission, bot echoes parsed codes for confirmation before saving.
+- Valid codes for sticker domain: team code (3 letters from the 48-team list) + 1–20, FWC00 or FWC1–FWC19, CC1–CC14. See `stickers_context.md`.
 
 ---
 
@@ -362,3 +363,32 @@ The webhook entry point builds a `UserIdentifier` from the Z-API payload and pas
 
 ### Consequences
 - `users.phone` remains `NOT NULL` in the current schema. A migration will be needed when `phone` becomes nullable (when @username becomes the sole identifier). The application layer is already ready for that migration.
+
+---
+
+## ADR-015: Sticker Identification — Single String Code (`{ "code": "BRA5" }`)
+
+**Status:** Accepted
+**Date:** 2026-04-26
+
+### Context
+The Panini FIFA World Cup 2026™ album does not use sequential integers. Stickers are identified by an alphanumeric code: a 3-letter team prefix (per FIFA convention) followed by a position number (1–20 per team, 00/1–19 for the FWC series, 1–14 for CC Coca-Cola promotional stickers). Total: 994 stickers for the complete album. See `stickers_context.md` for the full code list.
+
+Two payload structures were considered:
+- Option A: `{ "code": "BRA5" }` — single normalized string
+- Option B: `{ "team": "BRA", "number": 5 }` — structured fields
+
+### Decision
+Use **Option A: `{ "code": "BRA5" }` as the JSONB payload for the sticker domain**.
+
+### Rationale
+- JSONB equality queries are simpler: `payload->>'code' = 'BRA5'` vs. matching two fields.
+- The code string is exactly how collectors and the Panini app refer to stickers — no translation layer needed when displaying or parsing.
+- The parser normalizes input to uppercase with no space before storage (`bra 5` → `BRA5`), making the field unambiguous.
+- If structured querying by team is ever needed, a GIN index on `payload` and `payload->>'code'` covering queries handles it without schema changes.
+
+### Consequences
+- Discovery query: `array_agg(l.payload->>'code')` instead of `array_agg(l.payload->>'number')`.
+- Bilateral match JOIN: `my_wants.payload->>'code' = they_have.payload->>'code'`.
+- DB unique constraint for deduplication must be on `(user_id, domain, (payload->>'code'))`.
+- The old assumption of a 1–670 integer range is entirely superseded.

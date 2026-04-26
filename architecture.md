@@ -53,7 +53,7 @@
 │  id UUID PK                      id UUID PK                     │
 │  user_id UUID FK                 user_id UUID FK                │
 │  domain TEXT  (e.g.'sticker')    domain TEXT                    │
-│  payload JSONB ({number:45})     payload JSONB ({number:45})    │
+│  payload JSONB ({code:"BRA5"})   payload JSONB ({code:"BRA5"})    │
 │  expires_at TIMESTAMPTZ          created_at TIMESTAMPTZ         │
 │  created_at TIMESTAMPTZ                                          │
 │                                                                  │
@@ -120,7 +120,7 @@ User taps radius
 → state = ONBOARDING_RADIUS → save radius_km
 → Ask for listing numbers (explain range syntax)
 
-User sends listing (e.g. "12-25, 78, 203")
+User sends listing (e.g. "BRA5, ARG3, FWC8 ou BRA5-10")
 → state = ONBOARDING_LISTINGS → parse → echo back for confirmation
 → (buttons: [Confirmar] [Corrigir])
 
@@ -152,7 +152,7 @@ User taps [Olhar em Volta]
 
 Geospatial query:
   SELECT u.id, u.name,
-         array_agg(l.payload->>'number') AS items,
+         array_agg(l.payload->>'code') AS items,
          ST_Distance(u.location::geography, $myLocation::geography) AS dist_m
   FROM users u
   JOIN listings l ON l.user_id = u.id
