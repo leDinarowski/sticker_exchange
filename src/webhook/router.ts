@@ -12,6 +12,7 @@ import { handleOnboardingListings } from '../handlers/onboarding-listings.js';
 import { showMainMenu } from '../handlers/idle.js';
 import { handleUpdateLocation } from '../handlers/update-location.js';
 import { handleDiscovery, handleBrowsing } from '../handlers/discovery.js';
+import { handleBilateral } from '../handlers/bilateral.js';
 
 const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '1': 'discovery',
@@ -69,7 +70,8 @@ export async function route(
 
       if (rowId === 'update_location') return handleUpdateLocation(user, phone);
       if (rowId === 'discovery') return handleDiscovery(user, phone);
-      // 'bilateral' → Phase 5 | 'update_listings' → Phase 7
+      if (rowId === 'bilateral') return handleBilateral(user, phone);
+      // 'update_listings' → Phase 7
       return showMainMenu(user.id, phone);
     }
 

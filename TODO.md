@@ -92,12 +92,12 @@
 
 **Branch:** `feat/bilateral-match`
 
-- [ ] Handler: IDLE + [Match Perfeito] → check if wanted_listings exist for user
-- [ ] If no want list: prompt to add wants first (same parser as listings)
-- [ ] Bilateral query: users nearby who HAVE my wants AND WANT items I HAVE
-- [ ] Format: same as discovery board, label "Match Perfeito" next to names
-- [ ] State → BROWSING (mode = bilateral)
-- [ ] Tests: bilateral query correctness, want list empty case
+- [DONE — 2026-04-26] Handler: IDLE + [Match Perfeito] → check if wanted_listings exist for user
+- [DONE — 2026-04-26] If no want list: prompt to add wants first (same parser as listings)
+- [DONE — 2026-04-26] Bilateral query: users nearby who HAVE my wants AND WANT items I HAVE
+- [DONE — 2026-04-26] Format: same as discovery board, label "Match Perfeito" next to names
+- [DONE — 2026-04-26] State → BROWSING (mode = bilateral)
+- [DONE — 2026-04-26] Tests: bilateral query correctness, want list empty case
 
 ---
 

@@ -32,6 +32,7 @@ export interface ConversationStateContext {
   pending_target_name?: string;
   retry_count?: number;
   updating_location?: boolean;
+  collecting_wants?: boolean;
 }
 
 export interface ConversationStatePayload {

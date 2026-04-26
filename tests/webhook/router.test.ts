@@ -32,6 +32,15 @@ vi.mock('../../src/handlers/discovery.js', () => ({
   handleDiscovery: vi.fn(),
   handleBrowsing: vi.fn(),
 }));
+vi.mock('../../src/handlers/bilateral.js', () => ({
+  handleBilateral: vi.fn(),
+  runBilateralQuery: vi.fn(),
+}));
+vi.mock('../../src/db/bilateral.js', () => ({
+  getWantedListings: vi.fn(),
+  replaceWantedListings: vi.fn(),
+  findBilateralMatches: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';
@@ -39,6 +48,7 @@ import * as nameHandler from '../../src/handlers/onboarding-name.js';
 import * as idleHandler from '../../src/handlers/idle.js';
 import * as updateLocationHandler from '../../src/handlers/update-location.js';
 import * as discoveryHandler from '../../src/handlers/discovery.js';
+import * as bilateralHandler from '../../src/handlers/bilateral.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -181,6 +191,25 @@ describe('router', () => {
 
     expect(result.isOk()).toBe(true);
     expect(discoveryHandler.handleDiscovery).toHaveBeenCalledWith(user, '5511999999999');
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
+  });
+
+  it('routes IDLE + text "2" to handleBilateral', async () => {
+    vi.mocked(bilateralHandler.handleBilateral).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      text: { message: '2' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(bilateralHandler.handleBilateral).toHaveBeenCalledWith(user, '5511999999999');
     expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
   });
 

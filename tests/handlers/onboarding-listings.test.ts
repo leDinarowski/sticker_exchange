@@ -12,6 +12,12 @@ vi.mock('../../src/services/zapi.js', () => ({
 vi.mock('../../src/services/listings.js', () => ({
   applyListingUpdate: vi.fn(),
 }));
+vi.mock('../../src/db/bilateral.js', () => ({
+  replaceWantedListings: vi.fn(),
+}));
+vi.mock('../../src/handlers/bilateral.js', () => ({
+  runBilateralQuery: vi.fn(),
+}));
 vi.mock('../../src/handlers/idle.js', () => ({
   showMainMenu: vi.fn(),
 }));
@@ -20,11 +26,13 @@ import { handleOnboardingListings } from '../../src/handlers/onboarding-listings
 import * as db from '../../src/db/users.js';
 import * as zapi from '../../src/services/zapi.js';
 import * as listingsService from '../../src/services/listings.js';
+import * as bilateralDb from '../../src/db/bilateral.js';
+import * as bilateralHandler from '../../src/handlers/bilateral.js';
 import * as idle from '../../src/handlers/idle.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
-function makeUser(pendingListings?: string[]): User {
+function makeUser(pendingListings?: string[], extraCtx: Record<string, unknown> = {}): User {
   return {
     id: 'uuid-1',
     phone: '5511999999999',
@@ -33,7 +41,7 @@ function makeUser(pendingListings?: string[]): User {
     radius_km: 3,
     conversation_state: {
       step: ConversationStep.ONBOARDING_LISTINGS,
-      context: pendingListings ? { pending_listings: pendingListings } : {},
+      context: { ...(pendingListings ? { pending_listings: pendingListings } : {}), ...extraCtx },
       updated_at: '',
     },
     consented_at: '2026-04-25T00:00:00Z',
@@ -220,5 +228,78 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(result.isOk()).toBe(true);
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
     expect(zapi.sendText).toHaveBeenCalled();
+  });
+});
+
+describe('handleOnboardingListings — collecting_wants mode', () => {
+  it('re-prompts with wants prompt on empty input', async () => {
+    const user = makeUser(undefined, { collecting_wants: true });
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeEmptyPayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(zapi.sendText).toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('figurinhas voce busca')
+    );
+    expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('parses wants and sends echo-back with wants-specific text', async () => {
+    const user = makeUser(undefined, { collecting_wants: true });
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeTextPayload('BRA5, ARG3'));
+
+    expect(result.isOk()).toBe(true);
+    expect(zapi.sendButtons).toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('voce busca'),
+      expect.arrayContaining([expect.objectContaining({ id: 'confirm_listings' })])
+    );
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      { collecting_wants: true, pending_listings: ['BRA5', 'ARG3'] }
+    );
+    expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('saves to wanted_listings and runs bilateral query on confirm', async () => {
+    const user = makeUser(['BRA5', 'ARG3'], { collecting_wants: true });
+    vi.mocked(bilateralDb.replaceWantedListings).mockResolvedValue(ok(undefined));
+    vi.mocked(bilateralHandler.runBilateralQuery).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('confirm_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(bilateralDb.replaceWantedListings).toHaveBeenCalledWith(
+      'uuid-1',
+      'sticker',
+      ['BRA5', 'ARG3']
+    );
+    expect(bilateralHandler.runBilateralQuery).toHaveBeenCalled();
+    expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
+  });
+
+  it('clears pending but preserves collecting_wants on [Corrigir]', async () => {
+    const user = makeUser(['BRA5'], { collecting_wants: true });
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('correct_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      { collecting_wants: true }
+    );
+    expect(zapi.sendText).toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('figurinhas voce busca')
+    );
   });
 });
