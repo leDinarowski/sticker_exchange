@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   formatDistance,
   formatDiscoveryList,
+  formatBilateralList,
   formatProfiles,
   parseIntegerSelection,
 } from '../../src/utils/format-discovery.js';
@@ -100,6 +101,42 @@ describe('formatProfiles', () => {
     const entries = [makeEntry(1, 'Joao', ['BRA5'], 500)];
     const output = formatProfiles(entries);
     expect(output).not.toContain('1,2');
+  });
+});
+
+describe('formatBilateralList', () => {
+  it('labels each entry with Match Perfeito', () => {
+    const entries = [makeEntry(1, 'Ana', ['ARG3', 'ARG4'], 800)];
+    const output = formatBilateralList(entries);
+    expect(output).toContain('Match Perfeito');
+    expect(output).toContain('1. Ana');
+  });
+
+  it('uses "em comum" suffix on item count', () => {
+    const entries = [makeEntry(1, 'Ana', ['ARG3', 'ARG4'], 800)];
+    const output = formatBilateralList(entries);
+    expect(output).toContain('2 figurinhas em comum');
+  });
+
+  it('uses singular figurinha when count is 1', () => {
+    const entries = [makeEntry(1, 'Pedro', ['BRA7'], 2100)];
+    const output = formatBilateralList(entries);
+    expect(output).toContain('1 figurinha em comum');
+  });
+
+  it('numbers multiple entries correctly', () => {
+    const entries = [
+      makeEntry(1, 'Ana', ['ARG3'], 800),
+      makeEntry(2, 'Pedro', ['BRA7'], 2100),
+    ];
+    const output = formatBilateralList(entries);
+    expect(output).toContain('1. Ana');
+    expect(output).toContain('2. Pedro');
+  });
+
+  it('includes selection prompt', () => {
+    const entries = [makeEntry(1, 'Ana', ['ARG3'], 800)];
+    expect(formatBilateralList(entries)).toContain('Responda com o numero');
   });
 });
 

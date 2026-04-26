@@ -46,6 +46,20 @@ export function formatProfiles(entries: DiscoveryEntry[]): string {
   ].join('\n');
 }
 
+export function formatBilateralList(entries: DiscoveryEntry[]): string {
+  const lines = entries.map((e) => {
+    const count = e.items.length;
+    const label = count === 1 ? 'figurinha' : 'figurinhas';
+    return `${e.rank}. ${e.name} - Match Perfeito - ${formatDistance(e.dist_m)} - ${count} ${label} em comum`;
+  });
+
+  return [
+    'Matches perfeitos perto de voce:\n',
+    ...lines,
+    '\nResponda com o numero. Voce pode selecionar varios: ex. 1,3 ou 1-3',
+  ].join('\n');
+}
+
 export function parseIntegerSelection(input: string, max: number): number[] | null {
   const cleaned = input.trim();
   const parts = cleaned.split(',').map((p) => p.trim());

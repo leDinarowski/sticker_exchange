@@ -4,6 +4,7 @@ import { transitionState } from '../db/users.js';
 import { findNearbyUsers } from '../db/discovery.js';
 import {
   formatDiscoveryList,
+  formatBilateralList,
   formatProfiles,
   parseIntegerSelection,
 } from '../utils/format-discovery.js';
@@ -72,6 +73,12 @@ export async function handleBrowsing(
   return handleActionSelection(user, phone, input, discoveryList, ctx.selected_indices, ctx);
 }
 
+function getListFormatter(
+  mode?: string
+): (entries: DiscoveryEntry[]) => string {
+  return mode === 'bilateral' ? formatBilateralList : formatDiscoveryList;
+}
+
 async function handleListSelection(
   user: User,
   phone: string,
@@ -82,7 +89,7 @@ async function handleListSelection(
   const indices = parseIntegerSelection(input, list.length);
 
   if (!indices) {
-    return sendText(phone, formatDiscoveryList(list));
+    return sendText(phone, getListFormatter(ctx.mode)(list));
   }
 
   const selected = indices.map((i) => list[i - 1]).filter((e): e is DiscoveryEntry => e !== undefined);
@@ -113,7 +120,7 @@ async function handleActionSelection(
   }
 
   if (indices.includes(voltarIndex)) {
-    // Voltar — clear selection, re-show discovery list
+    // Voltar — clear selection, re-show list
     const { selected_indices: _cleared, ...restCtx } = ctx;
     void _cleared;
     const transitionResult = await transitionState(
@@ -124,7 +131,7 @@ async function handleActionSelection(
     if (transitionResult.isErr()) return transitionResult;
 
     logger.info({ userId: user.id, event: 'discovery_back' });
-    return sendText(phone, formatDiscoveryList(list));
+    return sendText(phone, getListFormatter(ctx.mode)(list));
   }
 
   // Contact stub — Phase 6 will replace this
