@@ -111,6 +111,23 @@ The root cause of both bugs: Z-API was integrated without testing against the re
 
 ---
 
+## 2026-04-25 — Vercel serverless terminates function after `res.end()` — no background async work
+
+**Hypothesis / Question:** Can a Vercel serverless function send `res.status(200)` early (to acknowledge Z-API quickly) and then continue async processing (DB writes, Z-API send) after the response?
+
+**Observation:**
+No. Vercel (AWS Lambda) does not guarantee execution continues after `res.end()` is called. The function is terminated immediately or shortly after the response is sent. Evidence: the webhook returned 200 but the WhatsApp reply never arrived; Vercel function duration was 111ms — consistent with Lambda terminating right after `res.json()` and before the 4 downstream network calls (~250ms combined) could complete.
+
+This is documented AWS Lambda behavior: "After the response has been sent, there is no guarantee that the function continues to execute." Vercel's own docs state: "Vercel Functions do not support background tasks. Make sure all async work is completed before sending a response."
+
+**Impact:** The webhook handler was silently dropping all DB operations and Z-API sends. The fix is to move `res.status(200).json()` to the last line of the handler, after `route()` resolves. Z-API waits up to ~5-10 seconds for a webhook response, and our processing completes in <500ms, so there is no timeout risk.
+
+**Action:**
+- `api/webhook.ts`: `res.status(200).json()` moved to after `route()` resolves. 200 is always returned regardless of route success/failure (prevents Z-API retries for non-transient errors).
+- Rule: never use fire-and-forget async after `res.end()` in any Vercel function. Complete all work first, respond last.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
