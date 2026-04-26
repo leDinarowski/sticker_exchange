@@ -25,3 +25,6 @@ export async function showMainMenu(
     },
   ]);
 }
+
+// NOTE: idle.ts intentionally keeps using sendList — the text fallback is
+// handled inside sendList in zapi.ts (TEMP until Z-API beta toggle is enabled).

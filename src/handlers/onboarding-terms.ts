@@ -10,8 +10,12 @@ export async function handleOnboardingTerms(
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
   const buttonId = payload.buttonsResponseMessage?.selectedButtonId;
+  const textInput = payload.text?.message?.trim().toLowerCase() ?? '';
 
-  if (buttonId === 'terms_accept') {
+  const isAccept = buttonId === 'terms_accept' || textInput === '1' || textInput === 'aceito';
+  const isRefuse = buttonId === 'terms_refuse' || textInput === '2' || textInput === 'recuso';
+
+  if (isAccept) {
     const consentResult = await recordConsent(user.id);
     if (consentResult.isErr()) return consentResult;
 
@@ -23,7 +27,7 @@ export async function handleOnboardingTerms(
     return sendText(user.phone, 'Agora compartilhe sua localizacao pelo WhatsApp.');
   }
 
-  if (buttonId === 'terms_refuse') {
+  if (isRefuse) {
     const refusalResult = await recordRefusal(user.id);
     if (refusalResult.isErr()) return refusalResult;
 

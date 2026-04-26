@@ -39,6 +39,17 @@ function makePayload(buttonId: string): WebhookPayload {
   };
 }
 
+function makeTextPayload(text: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    text: { message: text },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingRadius', () => {
@@ -70,5 +81,20 @@ describe('handleOnboardingRadius', () => {
     expect(result.isOk()).toBe(true);
     expect(db.updateUserRadius).not.toHaveBeenCalled();
     expect(zapi.sendButtons).toHaveBeenCalled();
+  });
+
+  it.each([
+    ['1', 1],
+    ['2', 3],
+    ['3', 5],
+  ])('saves radius from text input "%s" → %s km', async (text, expectedKm) => {
+    vi.mocked(db.updateUserRadius).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingRadius(mockUser, makeTextPayload(text));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserRadius).toHaveBeenCalledWith('uuid-1', expectedKm);
   });
 });
