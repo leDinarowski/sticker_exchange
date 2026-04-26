@@ -76,13 +76,15 @@
 
 **Branch:** `feat/discovery`
 
-- [ ] Handler: IDLE + [Olhar em Volta] → run geospatial query
-- [ ] Query: ST_DWithin + listings JOIN, top 10 ordered by distance, active listings only
-- [ ] Format: numbered list, name + distance in km + listing count
-- [ ] Save discovery_list in conversation_state.context
-- [ ] State → BROWSING (mode = discovery)
-- [ ] Handle empty results: suggest increasing radius (button: [Aumentar Raio])
-- [ ] Tests: geo query, result formatting, empty result handling, stale listing exclusion
+- [DONE — 2026-04-26] Handler: IDLE + [Olhar em Volta] → run geospatial query
+- [DONE — 2026-04-26] Query: ST_DWithin + listings JOIN, top 10 ordered by distance, active listings only
+- [DONE — 2026-04-26] Format: numbered list, name + distance in km + listing count
+- [DONE — 2026-04-26] Save discovery_list in conversation_state.context
+- [DONE — 2026-04-26] State → BROWSING (mode = discovery)
+- [DONE — 2026-04-26] Handle empty results: transition to ONBOARDING_RADIUS with updating_location; show radius menu
+- [DONE — 2026-04-26] BROWSING: parse single/multi selection, show profile deep-dive with sticker list per person
+- [DONE — 2026-04-26] Profile view: [Entrar em contato] stub + [Voltar] (supports comma/range multi-select)
+- [DONE — 2026-04-26] Tests: geo query, result formatting, empty result handling, selection parsing, profile view, Voltar
 
 ---
 
