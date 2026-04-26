@@ -36,6 +36,7 @@ Available skills:
 - `security` — secret scanning, credential leakage patterns, webhook verification, pre-PR checklist
 
 5. **`roadmap.md`** — phase sequencing and inter-phase dependencies. Check when scope is unclear.
+6. **`stickers_context.md`** — authoritative Panini 2026 album structure: sticker codes, team prefixes, series, total counts. **Read before touching anything in the listing parser, sticker validation, or payload format.**
 
 ## Repository Rules
 

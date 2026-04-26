@@ -41,7 +41,7 @@
 - [DONE — 2026-04-25] Handler: ONBOARDING_RADIUS → save `radius_km`, ask for listings
 - [DONE — 2026-04-25] Graceful error handling: invalid input at each step → re-prompt, max 3 retries
 - [DONE — 2026-04-25] Tests: unit tests for each state transition, mock Z-API calls
-- [ ] Tests: integration test for full onboarding sequence
+- [DONE — 2026-04-25] Tests: integration test for full onboarding sequence
 
 ---
 
@@ -49,10 +49,10 @@
 
 **Branch:** `feat/listing-registration`
 
-- [ ] Parser: ranges ("12-25"), comma-separated ("12, 45"), mixed
-- [ ] Differential parser: "remover 45, 78" / "adicionar 203"
-- [ ] Validation: domain = 'sticker', numbers 1–670 only
-- [ ] Deduplication: prevent same number twice for same user
+- [ ] Parser: alphanumeric codes ("BRA5", "ARG3"), ranges within team ("BRA5-10"), comma-separated mixed
+- [ ] Differential parser: "remover BRA5, ARG3" / "adicionar BRA5"
+- [ ] Validation: domain = 'sticker', code must match team prefix + 1–20, FWC00/FWC1–FWC19, or CC1–CC14 (see `stickers_context.md`)
+- [ ] Deduplication: prevent same code twice for same user
 - [ ] Echo-back confirmation: bot shows parsed list, buttons: [Confirmar] [Corrigir]
 - [ ] On confirm: insert listings, `expires_at` = NOW() + 24h
 - [ ] State → IDLE → show main menu

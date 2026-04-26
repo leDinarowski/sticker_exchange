@@ -58,7 +58,7 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 **Deliverables:**
 - Parser: ranges ("12-25"), comma-separated ("12, 45"), mixed
 - Differential parser: "remover 45, 78" / "adicionar 203"
-- Validation: domain = 'sticker', numbers 1–670 only
+- Validation: domain = 'sticker', code must be a valid team code + number (e.g. BRA1–BRA20), FWC00/FWC1–FWC19, or CC1–CC14 — see `stickers_context.md`
 - Deduplication: prevent same number twice for same user
 - Echo-back confirmation: bot shows parsed list (buttons: [Confirmar] [Corrigir])
 - On confirm: insert listings with `expires_at` = NOW() + 24h → state = IDLE → show main menu

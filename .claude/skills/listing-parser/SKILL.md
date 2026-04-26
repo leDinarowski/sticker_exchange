@@ -1,33 +1,53 @@
 ---
 name: listing-parser
-description: "Use this skill when implementing or testing the listing number parser: parsing user-submitted sticker numbers from free text, handling ranges and differential commands, echo-back confirmation, and validation rules. Covers all supported input formats and edge cases."
+description: "Use this skill when implementing or testing the listing number parser: parsing user-submitted sticker codes from free text, handling team ranges and differential commands, echo-back confirmation, and validation rules. Covers all supported input formats and edge cases."
 ---
 
-# Listing Parser
+# Listing Parser — Panini FIFA World Cup 2026™
+
+> Always read `stickers_context.md` before working in this area. It contains the authoritative list of all 48 team codes, series (FWC, CC), and sticker counts.
+
+## Sticker Code Format
+
+Each sticker is identified by a **3-letter team prefix + position number**, normalized to uppercase with no space:
+
+| Series | Code pattern | Valid numbers | Count |
+|--------|-------------|---------------|-------|
+| Teams (48) | `ARG1`–`ARG20`, `BRA1`–`BRA20`, … | 1–20 | 960 |
+| FWC (tournament) | `FWC00`, `FWC1`–`FWC19` | 00, 1–19 | 20 |
+| CC (Coca-Cola promo) | `CC1`–`CC14` | 1–14 | 14 |
+| **Total** | | | **994** |
+
+Valid team prefixes (48): ARG, BRA, COL, ECU, PAR, URU, CAN, CUW, HAI, MEX, PAN, USA, AUS, IRN, JPN, JOR, KOR, KSA, QAT, UZB, ALG, CPV, CIV, EGY, GHA, MAR, RSA, SEN, TUN, AUT, BEL, BIH, CRO, CZE, ENG, ESP, FRA, GER, NED, NOR, POR, SCO, SUI, SWE, TUR, NZL, COD, IRQ.
+
+---
 
 ## Supported Input Formats
 
-All parsing happens in `src/utils/listing-parser.ts`. The parser must handle all formats gracefully.
+| Format | Example input | Parsed result |
+|--------|--------------|---------------|
+| Single code | `BRA5` | [`BRA5`] |
+| Comma-separated | `BRA5, ARG3, FWC8` | [`BRA5`, `ARG3`, `FWC8`] |
+| Space-separated | `BRA5 ARG3 FWC8` | [`BRA5`, `ARG3`, `FWC8`] |
+| Range within team | `BRA5-10` or `BRA5-BRA10` | [`BRA5`, `BRA6`, …, `BRA10`] |
+| Mixed | `BRA5-8, ARG3, CC2` | [`BRA5`, `BRA6`, `BRA7`, `BRA8`, `ARG3`, `CC2`] |
+| Differential remove | `remover BRA5, ARG3` | `{ op: 'remove', codes: ['BRA5', 'ARG3'] }` |
+| Differential add | `adicionar BRA5` | `{ op: 'add', codes: ['BRA5'] }` |
 
-| Format | Example input | Result |
-|---|---|---|
-| Single number | `45` | [45] |
-| Comma-separated | `12, 45, 78` | [12, 45, 78] |
-| Whitespace-separated | `12 45 78` | [12, 45, 78] |
-| Range | `12-25` | [12, 13, ..., 25] |
-| Mixed | `12-15, 45, 78-80` | [12, 13, 14, 15, 45, 78, 79, 80] |
-| Differential remove | `remover 45, 78` | { op: 'remove', numbers: [45, 78] } |
-| Differential add | `adicionar 203, 415` | { op: 'add', numbers: [203, 415] } |
+Input is always normalized: trimmed, uppercased, spaces between prefix and number removed (`bra 5` → `BRA5`).
 
 ---
 
-## Validation Rules (Sticker Domain)
+## Validation Rules
 
-- Valid range: 1–670 (World Cup 2026 album)
-- Numbers outside range → reject with specific feedback ("Figurinha 671 nao existe no album.")
-- Non-numeric tokens → reject the whole submission, prompt again
-- Ranges where start > end → reject ("Intervalo invalido: 25-12")
-- Maximum 200 numbers per submission (prevents abuse)
+- Team prefix must be one of the 48 valid codes, `FWC`, or `CC`.
+- Number must be in the valid range for the series (1–20 for teams, 00/1–19 for FWC, 1–14 for CC).
+- `FWC00` is the only zero-padded code — accept it explicitly.
+- Range start must be ≤ range end (`BRA10-5` → reject with feedback).
+- Range must not span more than 20 numbers (`BRA1-20` is the maximum valid range per team).
+- Maximum 200 codes per submission (prevents abuse).
+- Unknown prefix → reject: `"Prefixo desconhecido: XYZ. Verifique o codigo da selecao."`.
+- Number out of range → reject: `"BRA21 nao existe. Selecoes tem de BRA1 a BRA20."`.
 
 ---
 
@@ -37,69 +57,118 @@ All parsing happens in `src/utils/listing-parser.ts`. The parser must handle all
 // src/utils/listing-parser.ts
 import { Result, ok, err } from 'neverthrow';
 
-const STICKER_MIN = 1;
-const STICKER_MAX = 670;
-const MAX_PER_SUBMISSION = 200;
+const TEAM_CODES = new Set([
+  'ARG','BRA','COL','ECU','PAR','URU',
+  'CAN','CUW','HAI','MEX','PAN','USA',
+  'AUS','IRN','JPN','JOR','KOR','KSA','QAT','UZB',
+  'ALG','CPV','CIV','EGY','GHA','MAR','RSA','SEN','TUN',
+  'AUT','BEL','BIH','CRO','CZE','ENG','ESP','FRA','GER',
+  'NED','NOR','POR','SCO','SUI','SWE','TUR',
+  'NZL','COD','IRQ',
+]);
 
 export type ParseResult =
-  | { op: 'set'; numbers: number[] }
-  | { op: 'add'; numbers: number[] }
-  | { op: 'remove'; numbers: number[] };
+  | { op: 'set';    codes: string[] }
+  | { op: 'add';    codes: string[] }
+  | { op: 'remove'; codes: string[] };
 
 export function parseListingInput(input: string): Result<ParseResult, string> {
-  const lower = input.trim().toLowerCase();
+  const normalized = input.trim().toUpperCase();
 
-  if (lower.startsWith('remover ')) {
-    const numbers = parseNumbers(lower.replace('remover ', ''));
-    if (numbers.isErr()) return err(numbers.error);
-    return ok({ op: 'remove', numbers: numbers.value });
+  if (normalized.startsWith('REMOVER ')) {
+    const result = parseCodes(normalized.slice('REMOVER '.length));
+    if (result.isErr()) return err(result.error);
+    return ok({ op: 'remove', codes: result.value });
   }
 
-  if (lower.startsWith('adicionar ')) {
-    const numbers = parseNumbers(lower.replace('adicionar ', ''));
-    if (numbers.isErr()) return err(numbers.error);
-    return ok({ op: 'add', numbers: numbers.value });
+  if (normalized.startsWith('ADICIONAR ')) {
+    const result = parseCodes(normalized.slice('ADICIONAR '.length));
+    if (result.isErr()) return err(result.error);
+    return ok({ op: 'add', codes: result.value });
   }
 
-  const numbers = parseNumbers(lower);
-  if (numbers.isErr()) return err(numbers.error);
-  return ok({ op: 'set', numbers: numbers.value });
+  const result = parseCodes(normalized);
+  if (result.isErr()) return err(result.error);
+  return ok({ op: 'set', codes: result.value });
 }
 
-function parseNumbers(input: string): Result<number[], string> {
-  const tokens = input.split(/[\s,]+/).filter(Boolean);
-  const numbers: number[] = [];
+function parseCodes(input: string): Result<string[], string> {
+  // Normalize: remove spaces between prefix and number (e.g. "BRA 5" → "BRA5")
+  const cleaned = input.replace(/([A-Z]{2,3})\s+(\d+)/g, '$1$2');
+  const tokens = cleaned.split(/[\s,]+/).filter(Boolean);
+  const codes: string[] = [];
 
   for (const token of tokens) {
-    if (token.includes('-')) {
-      const parts = token.split('-');
-      if (parts.length !== 2) return err(`Formato invalido: ${token}`);
-      const start = parseInt(parts[0], 10);
-      const end = parseInt(parts[1], 10);
+    // Range: BRA5-10 or BRA5-BRA10
+    const rangeMatch = token.match(/^([A-Z]{2,3})(\d+)-(?:[A-Z]{2,3})?(\d+)$/);
+    if (rangeMatch) {
+      const [, prefix, startStr, endStr] = rangeMatch;
+      const start = parseInt(startStr, 10);
+      const end = parseInt(endStr, 10);
 
-      if (isNaN(start) || isNaN(end)) return err(`Numeros invalidos: ${token}`);
       if (start > end) return err(`Intervalo invalido: ${token}. O primeiro numero deve ser menor.`);
-      if (end - start > 200) return err(`Intervalo muito grande: ${token}. Maximo 200 numeros por vez.`);
+      if (end - start >= 20) return err(`Intervalo muito grande: ${token}. Maximo 20 por vez.`);
 
-      for (let n = start; n <= end; n++) numbers.push(n);
-    } else {
-      const n = parseInt(token, 10);
-      if (isNaN(n)) return err(`"${token}" nao e um numero valido.`);
-      numbers.push(n);
+      for (let n = start; n <= end; n++) {
+        const code = `${prefix}${n}`;
+        const validation = validateCode(code);
+        if (validation.isErr()) return err(validation.error);
+        codes.push(code);
+      }
+      continue;
     }
+
+    // Single code: BRA5, FWC00, CC3
+    const codeMatch = token.match(/^([A-Z]{2,3})(\d+)$/);
+    if (codeMatch) {
+      const validation = validateCode(token);
+      if (validation.isErr()) return err(validation.error);
+      codes.push(token);
+      continue;
+    }
+
+    return err(`"${token}" nao e um codigo valido. Use o formato da selecao seguido do numero, ex: BRA5.`);
   }
 
-  const invalid = numbers.filter(n => n < STICKER_MIN || n > STICKER_MAX);
-  if (invalid.length > 0) {
-    return err(`Figurinhas fora do album: ${invalid.join(', ')}. Use numeros entre ${STICKER_MIN} e ${STICKER_MAX}.`);
+  if (codes.length > 200) {
+    return err(`Maximo de 200 figurinhas por envio. Voce enviou ${codes.length}.`);
   }
 
-  if (numbers.length > MAX_PER_SUBMISSION) {
-    return err(`Maximo de ${MAX_PER_SUBMISSION} figurinhas por envio.`);
-  }
-
-  const unique = [...new Set(numbers)].sort((a, b) => a - b);
+  const unique = [...new Set(codes)];
   return ok(unique);
+}
+
+function validateCode(code: string): Result<void, string> {
+  const match = code.match(/^([A-Z]{2,3})(\d+)$/);
+  if (!match) return err(`Codigo invalido: ${code}`);
+
+  const [, prefix, numStr] = match;
+  const num = parseInt(numStr, 10);
+
+  if (prefix === 'FWC') {
+    // FWC00 is valid; FWC1–FWC19 are valid
+    if (numStr !== '00' && (num < 1 || num > 19)) {
+      return err(`${code} nao existe. Serie FWC vai de FWC00 a FWC19.`);
+    }
+    return ok(undefined);
+  }
+
+  if (prefix === 'CC') {
+    if (num < 1 || num > 14) {
+      return err(`${code} nao existe. Serie CC vai de CC1 a CC14.`);
+    }
+    return ok(undefined);
+  }
+
+  if (!TEAM_CODES.has(prefix)) {
+    return err(`Prefixo desconhecido: ${prefix}. Verifique o codigo da selecao.`);
+  }
+
+  if (num < 1 || num > 20) {
+    return err(`${code} nao existe. Selecoes tem de ${prefix}1 a ${prefix}20.`);
+  }
+
+  return ok(undefined);
 }
 ```
 
@@ -111,7 +180,7 @@ After any successful parse, always echo back before saving:
 
 ```typescript
 // In handler after successful parse:
-const formatted = formatListingPreview(parsed.numbers);
+const formatted = formatListingPreview(parsed.codes);
 
 await zapi.sendButtons({
   phone: user.phone,
@@ -124,7 +193,7 @@ await zapi.sendButtons({
 
 // Store pending in state context — do NOT write to DB yet
 await transitionState(user.id, 'ONBOARDING_LISTINGS', {
-  pending_listings: parsed.numbers,
+  pending_listings: parsed.codes,
 });
 ```
 
@@ -135,27 +204,39 @@ Only write to the `listings` table after the user taps [Confirmar].
 ## Formatting for Display
 
 ```typescript
-export function formatListingPreview(numbers: number[]): string {
-  // Collapse consecutive sequences into ranges for readability
-  if (numbers.length === 0) return '(nenhuma)';
-  if (numbers.length <= 10) return numbers.join(', ');
+export function formatListingPreview(codes: string[]): string {
+  if (codes.length === 0) return '(nenhuma)';
+  if (codes.length <= 10) return codes.join(', ');
 
-  const ranges: string[] = [];
-  let start = numbers[0];
-  let prev = numbers[0];
-
-  for (let i = 1; i <= numbers.length; i++) {
-    if (i === numbers.length || numbers[i] !== prev + 1) {
-      ranges.push(start === prev ? `${start}` : `${start}-${prev}`);
-      start = numbers[i];
-    }
-    prev = numbers[i];
+  // Group by prefix and collapse consecutive numbers into ranges
+  const byPrefix: Record<string, number[]> = {};
+  for (const code of codes) {
+    const match = code.match(/^([A-Z]{2,3})(\d+)$/);
+    if (!match) continue;
+    const [, prefix, numStr] = match;
+    (byPrefix[prefix] ??= []).push(parseInt(numStr, 10));
   }
 
-  return ranges.join(', ');
+  const parts: string[] = [];
+  for (const [prefix, numbers] of Object.entries(byPrefix)) {
+    numbers.sort((a, b) => a - b);
+    const ranges: string[] = [];
+    let start = numbers[0];
+    let prev = numbers[0];
+    for (let i = 1; i <= numbers.length; i++) {
+      if (i === numbers.length || numbers[i] !== prev + 1) {
+        ranges.push(start === prev ? `${prefix}${start}` : `${prefix}${start}-${prev}`);
+        start = numbers[i];
+      }
+      prev = numbers[i];
+    }
+    parts.push(ranges.join(', '));
+  }
+
+  return parts.join(', ');
 }
-// [12, 13, 14, 45, 78, 79] → "12-14, 45, 78-79"
-// [12, 14, 45] → "12, 14, 45"
+// ['BRA5','BRA6','BRA7','ARG3'] → "BRA5-7, ARG3"
+// ['BRA5','BRA7','ARG3']       → "BRA5, BRA7, ARG3"
 ```
 
 ---
@@ -171,39 +252,39 @@ export async function applyListingUpdate(
 ): Promise<Result<void, Error>> {
   switch (result.op) {
     case 'set':
-      // Delete existing, insert new
       await supabase.from('listings').delete().eq('user_id', userId).eq('domain', domain);
-      return insertListings(userId, domain, result.numbers);
+      return insertListings(userId, domain, result.codes);
 
     case 'add':
-      return insertListings(userId, domain, result.numbers); // DB unique constraint handles dupes
+      return insertListings(userId, domain, result.codes);
 
-    case 'remove':
+    case 'remove': {
       const { error } = await supabase
         .from('listings')
         .delete()
         .eq('user_id', userId)
         .eq('domain', domain)
-        .in('payload->>number', result.numbers.map(String));
+        .in('payload->>code', result.codes);
       return error ? err(new Error(error.message)) : ok(undefined);
+    }
   }
 }
 
 async function insertListings(
   userId: string,
   domain: string,
-  numbers: number[]
+  codes: string[]
 ): Promise<Result<void, Error>> {
   const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-  const rows = numbers.map(n => ({
+  const rows = codes.map(code => ({
     user_id: userId,
     domain,
-    payload: { number: n },
+    payload: { code },
     expires_at: expiresAt,
   }));
 
   const { error } = await supabase.from('listings').upsert(rows, {
-    onConflict: 'user_id,domain,payload', // requires unique constraint
+    onConflict: 'user_id,domain,payload',
   });
 
   return error ? err(new Error(error.message)) : ok(undefined);
@@ -216,16 +297,25 @@ async function insertListings(
 
 ```typescript
 describe('parseListingInput', () => {
-  it('parses comma-separated numbers', ...)
-  it('parses ranges', ...)
-  it('parses mixed ranges and singles', ...)
-  it('parses differential add', ...)
-  it('parses differential remove', ...)
-  it('rejects numbers outside 1-670', ...)
-  it('rejects invalid ranges (start > end)', ...)
-  it('rejects non-numeric tokens', ...)
-  it('deduplicates numbers', ...)
-  it('returns sorted output', ...)
-  it('collapses ranges in formatListingPreview', ...)
+  it('parses single code: "BRA5" → [BRA5]')
+  it('parses comma-separated: "BRA5, ARG3" → [BRA5, ARG3]')
+  it('parses range within team: "BRA5-8" → [BRA5, BRA6, BRA7, BRA8]')
+  it('parses BRA5-BRA8 range syntax')
+  it('parses FWC00 as valid')
+  it('parses FWC1-FWC5 range')
+  it('parses CC1-CC14 range')
+  it('parses differential add: "adicionar BRA5" → { op: add, codes: [BRA5] }')
+  it('parses differential remove: "remover BRA5, ARG3"')
+  it('normalizes lowercase: "bra5" → BRA5')
+  it('normalizes space: "BRA 5" → BRA5')
+  it('rejects unknown prefix: "XYZ5"')
+  it('rejects number out of range: "BRA21"')
+  it('rejects FWC20 (max is FWC19)')
+  it('rejects CC15 (max is CC14)')
+  it('rejects invalid range: "BRA10-5" (start > end)')
+  it('rejects non-code tokens: "hello"')
+  it('deduplicates codes')
+  it('rejects more than 200 codes')
+  it('collapses ranges in formatListingPreview: [BRA5,BRA6,BRA7,ARG3] → "BRA5-7, ARG3"')
 });
 ```

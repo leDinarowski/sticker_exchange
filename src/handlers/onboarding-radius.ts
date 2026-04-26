@@ -50,6 +50,6 @@ export async function handleOnboardingRadius(
 
   return sendText(
     user.phone,
-    'Envie os numeros das suas figurinhas duplicadas. Use virgulas ou tracos: 12, 45, 78 ou 12-25.'
+    'Envie os codigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.'
   );
 }
