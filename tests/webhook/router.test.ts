@@ -28,12 +28,17 @@ vi.mock('../../src/handlers/idle.js', () => ({
 vi.mock('../../src/handlers/update-location.js', () => ({
   handleUpdateLocation: vi.fn(),
 }));
+vi.mock('../../src/handlers/discovery.js', () => ({
+  handleDiscovery: vi.fn(),
+  handleBrowsing: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';
 import * as nameHandler from '../../src/handlers/onboarding-name.js';
 import * as idleHandler from '../../src/handlers/idle.js';
 import * as updateLocationHandler from '../../src/handlers/update-location.js';
+import * as discoveryHandler from '../../src/handlers/discovery.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -158,6 +163,40 @@ describe('router', () => {
     expect(result.isOk()).toBe(true);
     expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
     expect(updateLocationHandler.handleUpdateLocation).not.toHaveBeenCalled();
+  });
+
+  it('routes IDLE + text "1" to handleDiscovery', async () => {
+    vi.mocked(discoveryHandler.handleDiscovery).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      text: { message: '1' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(discoveryHandler.handleDiscovery).toHaveBeenCalledWith(user, '5511999999999');
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
+  });
+
+  it('routes BROWSING state to handleBrowsing', async () => {
+    vi.mocked(discoveryHandler.handleBrowsing).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.BROWSING);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(discoveryHandler.handleBrowsing).toHaveBeenCalledWith(
+      user,
+      expect.any(Object),
+      '5511999999999'
+    );
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
   });
 
   it('shows main menu for unknown state (fallback)', async () => {

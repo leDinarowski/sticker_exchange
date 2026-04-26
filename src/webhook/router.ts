@@ -11,6 +11,7 @@ import { handleOnboardingRadius } from '../handlers/onboarding-radius.js';
 import { handleOnboardingListings } from '../handlers/onboarding-listings.js';
 import { showMainMenu } from '../handlers/idle.js';
 import { handleUpdateLocation } from '../handlers/update-location.js';
+import { handleDiscovery, handleBrowsing } from '../handlers/discovery.js';
 
 const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '1': 'discovery',
@@ -67,11 +68,14 @@ export async function route(
         IDLE_TEXT_TO_ROW_ID[payload.text?.message?.trim() ?? ''];
 
       if (rowId === 'update_location') return handleUpdateLocation(user, phone);
-      // 'discovery' → Phase 4 | 'bilateral' → Phase 5 | 'update_listings' → Phase 7
+      if (rowId === 'discovery') return handleDiscovery(user, phone);
+      // 'bilateral' → Phase 5 | 'update_listings' → Phase 7
       return showMainMenu(user.id, phone);
     }
 
     case ConversationStep.BROWSING:
+      return handleBrowsing(user, payload, phone);
+
     case ConversationStep.CONFIRMING_INVENTORY:
     case ConversationStep.AWAITING_MATCH_RESPONSE:
       return showMainMenu(user.id, phone);

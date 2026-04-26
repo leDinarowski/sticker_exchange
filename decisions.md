@@ -421,3 +421,49 @@ Use **Option B**: the `ONBOARDING_LISTINGS` handler dispatches on `context.pendi
 ### Consequences
 - `context.pending_listings` must always be treated as `string[] | undefined`.
 - Handlers that read context must guard against stale pending data from a previous incomplete session.
+
+---
+
+## ADR-017: Location Update Flow via Context Flag (updating_location)
+
+**Status:** Accepted
+**Date:** 2026-04-26
+
+### Context
+Users need to update their location and radius from the IDLE main menu (Phase 3). The onboarding flow already handles location + radius collection via `ONBOARDING_LOCATION` → `ONBOARDING_RADIUS`. After radius is set during onboarding, the user moves to `ONBOARDING_LISTINGS`. After an update, the user must return to `IDLE`.
+
+### Decision
+Reuse `ONBOARDING_LOCATION` and `ONBOARDING_RADIUS` states for the update path. Set `context.updating_location = true` when entering this path from IDLE. `onboarding-radius` checks this flag to decide next state: IDLE (update path) vs ONBOARDING_LISTINGS (onboarding path). No new state enum values added.
+
+### Rationale
+- Consistent with ADR-016: context flags for sub-state variation, new enum values only for states with distinct UX identity.
+- The two paths (onboarding vs. update) share identical location + radius collection UX; the only difference is the post-radius destination.
+- The `updating_location` flag is also consumed by `onboarding-location` to carry the flag through to `ONBOARDING_RADIUS` context.
+
+### Consequences
+- Any future handler that re-uses `ONBOARDING_RADIUS` for a different purpose must respect `context.updating_location`.
+- `context.updating_location` must be cleared (not passed through) when transitioning to IDLE.
+
+---
+
+## ADR-018: Discovery Query via find_nearby_users_for SQL Function
+
+**Status:** Accepted
+**Date:** 2026-04-26
+
+### Context
+The discovery board (Phase 4) requires querying users near the current user within their configured radius. This query needs the user's snapped location and `radius_km`. Two approaches:
+- Option A: Retrieve the user's location coordinates in application code, then pass them to a parameterised query.
+- Option B: Create a SQL function that reads the user's location and radius internally, returning only distances.
+
+### Decision
+Use **Option B**: a Supabase RPC function `find_nearby_users_for(p_user_id, p_domain)` that reads `users.location` and `users.radius_km * 1000` internally. It returns `(user_id, name, items, dist_m)` — no coordinates in the output.
+
+### Rationale
+- ADR-010 mandates that exact coordinates never reach application code or clients. Snapped H3 center coordinates are not "exact GPS" but they are still location data — keeping them inside SQL is the safer default.
+- Eliminates a separate DB round-trip to fetch user location before running the geo query.
+- The existing `find_nearby_users` RPC (Phase 0/2 migration) requires caller to supply lat/lng. `find_nearby_users_for` is a new function that wraps the same logic without exposing coordinates.
+
+### Consequences
+- Adding user-specific radius overrides or per-query radius parameters requires modifying the SQL function, not the application code.
+- The function must be updated if the `users` location or radius column names change.
