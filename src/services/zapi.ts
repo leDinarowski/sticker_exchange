@@ -34,6 +34,29 @@ async function zapiPost(
   return ok(undefined);
 }
 
+async function zapiPostData<T>(
+  endpoint: string,
+  body: Record<string, unknown>
+): Promise<Result<T, Error>> {
+  const url = `${baseUrl()}/${endpoint}`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Client-Token': CLIENT_TOKEN ?? '',
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => res.statusText);
+    return err(new Error(`Z-API ${endpoint} failed (${res.status}): ${text}`));
+  }
+
+  const data = await res.json() as T;
+  return ok(data);
+}
+
 export interface ButtonOption {
   id: string;
   label: string;
@@ -68,6 +91,19 @@ export async function sendButtons(
   logger.info({ event: 'zapi_send', type: 'buttons', count: buttons.length });
   const options = buttons.map((b, i) => `${i + 1} - ${b.label}`).join('\n');
   return sendText(phone, `${message}\n\n${options}\n\nResponda com o numero.`);
+}
+
+export async function createGroup(
+  name: string,
+  participants: string[]
+): Promise<Result<string, Error>> {
+  logger.info({ event: 'zapi_send', type: 'create_group', count: participants.length });
+  const result = await zapiPostData<{ phone: string }>('create-group', {
+    groupName: name,
+    phones: participants,
+  });
+  if (result.isErr()) return err(result.error);
+  return ok(result.value.phone);
 }
 
 // TEMP: list messages require Z-API beta toggle (unavailable on trial).

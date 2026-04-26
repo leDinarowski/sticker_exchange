@@ -105,18 +105,18 @@
 
 **Branch:** `feat/connection`
 
-- [ ] Handler: BROWSING → parse numeric selection ("1", "1 e 3")
-- [ ] Insert matches row: status = PENDING
-- [ ] Notify User A: "Aguardando confirmacao de {nome B}..."
-- [ ] Notify User B: button message: [Sim] [Nao]
-- [ ] Handler: User B taps [Sim] → status = CONFIRMED_B → Z-API creates group
-- [ ] Bot welcome message in group (no emojis, concise)
-- [ ] Update status = CONNECTED
-- [ ] Prompt both users: [Atualizar Figurinhas]
-- [ ] Handler: User B taps [Nao] → status = DECLINED → notify User A
-- [ ] Timeout: 24h with no response → status = EXPIRED → notify User A
-- [ ] Both users return to IDLE after resolution
-- [ ] Tests: selection parsing, match status transitions, group creation mock, timeout
+- [DONE — 2026-04-26] Handler: BROWSING → parse numeric selection ("1", "1 e 3")
+- [DONE — 2026-04-26] Insert matches row: status = PENDING
+- [DONE — 2026-04-26] Notify User A: "Pedido enviado para {nome B}. Voce sera avisado quando responderem."
+- [DONE — 2026-04-26] Notify User B: button message: [Sim] [Nao] (text fallback for trial account)
+- [DONE — 2026-04-26] Handler: User B taps [Sim] → status = CONFIRMED_B → Z-API creates group
+- [DONE — 2026-04-26] Bot welcome message in group (no emojis, concise)
+- [DONE — 2026-04-26] Update status = CONNECTED
+- [DONE — 2026-04-26] Both users returned to IDLE with main menu after resolution
+- [DONE — 2026-04-26] Handler: User B taps [Nao] → status = DECLINED → notify User A
+- [DONE — 2026-04-26] Timeout: 24h lazy expiry → status = EXPIRED → notify User A on next message
+- [DONE — 2026-04-26] Both users return to IDLE after resolution
+- [DONE — 2026-04-26] Tests: selection parsing, match status transitions, group creation mock, timeout, text fallback
 
 ---
 

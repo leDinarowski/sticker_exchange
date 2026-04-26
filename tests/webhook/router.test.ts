@@ -41,6 +41,9 @@ vi.mock('../../src/db/bilateral.js', () => ({
   replaceWantedListings: vi.fn(),
   findBilateralMatches: vi.fn(),
 }));
+vi.mock('../../src/handlers/connection-response.js', () => ({
+  handleAwaitingMatchResponse: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';
@@ -49,6 +52,7 @@ import * as idleHandler from '../../src/handlers/idle.js';
 import * as updateLocationHandler from '../../src/handlers/update-location.js';
 import * as discoveryHandler from '../../src/handlers/discovery.js';
 import * as bilateralHandler from '../../src/handlers/bilateral.js';
+import * as connectionResponseHandler from '../../src/handlers/connection-response.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -236,5 +240,38 @@ describe('router', () => {
 
     expect(result.isOk()).toBe(true);
     expect(idleHandler.showMainMenu).toHaveBeenCalled();
+  });
+
+  it('routes AWAITING_MATCH_RESPONSE state to handleAwaitingMatchResponse', async () => {
+    vi.mocked(connectionResponseHandler.handleAwaitingMatchResponse).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.AWAITING_MATCH_RESPONSE);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(connectionResponseHandler.handleAwaitingMatchResponse).toHaveBeenCalledWith(
+      user,
+      expect.any(Object),
+      '5511999999999'
+    );
+  });
+
+  it('intercepts match_accept_ button regardless of user state', async () => {
+    vi.mocked(connectionResponseHandler.handleAwaitingMatchResponse).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.BROWSING);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-2',
+      fromMe: false,
+      buttonsResponseMessage: { selectedButtonId: 'match_accept_some-uuid' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(connectionResponseHandler.handleAwaitingMatchResponse).toHaveBeenCalled();
+    expect(discoveryHandler.handleBrowsing).not.toHaveBeenCalled();
   });
 });

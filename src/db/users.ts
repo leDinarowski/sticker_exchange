@@ -118,6 +118,19 @@ export async function recordRefusal(
   return ok(undefined);
 }
 
+export async function findUserById(
+  userId: string
+): Promise<Result<User | null, Error>> {
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('id', userId)
+    .maybeSingle();
+
+  if (error) return err(new Error(error.message));
+  return ok(data as User | null);
+}
+
 export async function updateUserRadius(
   userId: string,
   radiusKm: number

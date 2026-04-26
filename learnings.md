@@ -180,6 +180,18 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-04-26 — neverthrow: `return result` breaks when return types diverge on success type
+
+**Hypothesis / Question:** Can you propagate a `Result<T, Error>` error by returning it directly from a function typed `Result<void, Error>`?
+
+**Observation:** No. With neverthrow, `Err<T, E>` carries the success type `T` in its type signature. Returning `Err<Match | null, Error>` from a `Promise<Result<void, Error>>` function is a TypeScript type error: "Type 'Match | null' is not assignable to type 'void'". The fix is always `return err(result.error)` (construct a new `Err<void, Error>`) rather than `return result` (propagate the original `Err<T, Error>` with its mismatched success type).
+
+**Impact:** Caught at typecheck time, but produced 8 compiler errors across two handlers in Phase 6 before being fixed. Pattern affects any function that calls another returning a `Result<SomeType, Error>` and wants to short-circuit on error.
+
+**Action:** Rule: in neverthrow error-propagation branches, always write `if (r.isErr()) return err(r.error)` — never `return r`. This is the idiomatic pattern already used in every existing handler (e.g., `discovery.ts: if (resultsResult.isErr()) return err(resultsResult.error)`). New handlers must follow the same convention from day one.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
