@@ -49,15 +49,15 @@
 
 **Branch:** `feat/listing-registration`
 
-- [ ] Parser: alphanumeric codes ("BRA5", "ARG3"), ranges within team ("BRA5-10"), comma-separated mixed
-- [ ] Differential parser: "remover BRA5, ARG3" / "adicionar BRA5"
-- [ ] Validation: domain = 'sticker', code must match team prefix + 1–20, FWC00/FWC1–FWC19, or CC1–CC14 (see `stickers_context.md`)
-- [ ] Deduplication: prevent same code twice for same user
-- [ ] Echo-back confirmation: bot shows parsed list, buttons: [Confirmar] [Corrigir]
-- [ ] On confirm: insert listings, `expires_at` = NOW() + 24h
-- [ ] State → IDLE → show main menu
-- [ ] Main menu buttons: [Olhar em Volta] [Match Perfeito] [Atualizar Figurinhas] [Atualizar Localizacao]
-- [ ] Tests: all parser edge cases, deduplication, expiry assignment
+- [DONE — 2026-04-25] Parser: alphanumeric codes ("BRA5", "ARG3"), ranges within team ("BRA5-10"), comma-separated mixed
+- [DONE — 2026-04-25] Differential parser: "remover BRA5, ARG3" / "adicionar BRA5"
+- [DONE — 2026-04-25] Validation: domain = 'sticker', code must match team prefix + 1–20, FWC00/FWC1–FWC19, or CC1–CC14 (see `stickers_context.md`)
+- [DONE — 2026-04-25] Deduplication: prevent same code twice for same user
+- [DONE — 2026-04-25] Echo-back confirmation: bot shows parsed list, buttons: [Confirmar] [Corrigir]
+- [DONE — 2026-04-25] On confirm: insert listings, `expires_at` = NOW() + 24h
+- [DONE — 2026-04-25] State → IDLE → show main menu
+- [DONE — 2026-04-25] Main menu buttons: [Olhar em Volta] [Match Perfeito] [Atualizar Figurinhas] [Atualizar Localizacao]
+- [DONE — 2026-04-25] Tests: all parser edge cases, deduplication, expiry assignment
 
 ---
 

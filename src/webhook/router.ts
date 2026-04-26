@@ -50,7 +50,7 @@ export async function route(
       return handleOnboardingRadius(user, payload);
 
     case ConversationStep.ONBOARDING_LISTINGS:
-      return handleOnboardingListings(user);
+      return handleOnboardingListings(user, payload);
 
     case ConversationStep.IDLE:
     case ConversationStep.BROWSING:

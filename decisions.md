@@ -392,3 +392,32 @@ Use **Option A: `{ "code": "BRA5" }` as the JSONB payload for the sticker domain
 - Bilateral match JOIN: `my_wants.payload->>'code' = they_have.payload->>'code'`.
 - DB unique constraint for deduplication must be on `(user_id, domain, (payload->>'code'))`.
 - The old assumption of a 1–670 integer range is entirely superseded.
+
+---
+
+## ADR-016: ONBOARDING_LISTINGS Sub-State via Context Field (Not a New State)
+
+**Status:** Accepted
+**Date:** 2026-04-25
+
+### Context
+The listing registration flow has two phases:
+1. Parse phase — user submits sticker codes; bot echoes back for confirmation.
+2. Confirm phase — user taps [Confirmar] or [Corrigir]; bot either writes to DB or re-prompts.
+
+Two options for distinguishing between the phases:
+- Option A: Add a new `CONFIRMING_LISTINGS` state to the enum.
+- Option B: Use the presence of `context.pending_listings` in the existing `ONBOARDING_LISTINGS` state.
+
+### Decision
+Use **Option B**: the `ONBOARDING_LISTINGS` handler dispatches on `context.pending_listings` to detect which phase it is in. No new state enum value is added.
+
+### Rationale
+- Adding a state per sub-step inflates the state machine for states with no meaningful independent identity or re-entry path. `CONFIRMING_LISTINGS` would be indistinguishable from `ONBOARDING_LISTINGS` from a UX perspective.
+- The pattern is already established: `ONBOARDING_NAME` uses `context.retry_count` to vary copy across attempts without introducing a new state.
+- Two-phase commit: DB write happens only on [Confirmar]. Pending codes are stored in context — a reversible, non-destructive intermediate state. If the session drops before confirmation, the user simply re-enters the parse phase on next message.
+- If additional sub-states are needed in the future (e.g. a paginated listing flow), a dedicated state becomes justified. For a two-step flow, a context field is simpler.
+
+### Consequences
+- `context.pending_listings` must always be treated as `string[] | undefined`.
+- Handlers that read context must guard against stale pending data from a previous incomplete session.

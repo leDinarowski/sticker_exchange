@@ -154,6 +154,22 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ## Pending Experiments
 
+---
+
+## 2026-04-25 — Router did not pass `payload` to `handleOnboardingListings` — stub signature gap
+
+**Hypothesis / Question:** Do all handlers need `(user, payload)` even when the current implementation ignores the payload?
+
+**Observation:** The Phase 1 stub for `handleOnboardingListings` had signature `(user: User)` because it never read user input — it just transitioned to IDLE. When Phase 2 replaced the stub with real input parsing, the router was calling `handleOnboardingListings(user)` without `payload`, which would have caused a TypeScript error at call time. The router required a one-line fix.
+
+**Impact:** Minor — caught at typecheck time before any test ran. But the root cause (stub with incomplete signature) added an invisible debt.
+
+**Action:** All new handlers must have signature `(user: User, payload: WebhookPayload): Promise<Result<void, Error>>` from day one, regardless of whether the current implementation uses the payload. The router passes payload to every handler; the handler can ignore it. This prevents router changes when the handler later gains input logic.
+
+---
+
+## Pending Experiments
+
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
 - [ ] Vercel cold start: measure end-to-end response time on first invocation after idle period
 - [ ] Supabase connection pooler: confirm pooler handles burst of concurrent Vercel invocations without connection errors

@@ -19,14 +19,14 @@ export interface DiscoveryEntry {
   rank: number;
   user_id: string;
   name: string;
-  items: number[];
+  items: string[];
   dist_m: number;
 }
 
 export interface ConversationStateContext {
   mode?: 'discovery' | 'bilateral';
   discovery_list?: DiscoveryEntry[];
-  pending_listings?: number[];
+  pending_listings?: string[];
   pending_match_id?: string;
   pending_target_name?: string;
   retry_count?: number;
