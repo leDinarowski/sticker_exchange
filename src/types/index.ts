@@ -26,10 +26,12 @@ export interface DiscoveryEntry {
 export interface ConversationStateContext {
   mode?: 'discovery' | 'bilateral';
   discovery_list?: DiscoveryEntry[];
+  selected_indices?: number[];
   pending_listings?: string[];
   pending_match_id?: string;
   pending_target_name?: string;
   retry_count?: number;
+  updating_location?: boolean;
 }
 
 export interface ConversationStatePayload {

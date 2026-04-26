@@ -9,10 +9,14 @@ vi.mock('../../src/services/zapi.js', () => ({
   sendText: vi.fn(),
   sendButtons: vi.fn(),
 }));
+vi.mock('../../src/handlers/idle.js', () => ({
+  showMainMenu: vi.fn(),
+}));
 
 import { handleOnboardingRadius } from '../../src/handlers/onboarding-radius.js';
 import * as db from '../../src/db/users.js';
 import * as zapi from '../../src/services/zapi.js';
+import * as idleHandler from '../../src/handlers/idle.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -96,5 +100,32 @@ describe('handleOnboardingRadius', () => {
 
     expect(result.isOk()).toBe(true);
     expect(db.updateUserRadius).toHaveBeenCalledWith('uuid-1', expectedKm);
+  });
+
+  it('transitions to IDLE and shows main menu when updating_location is true', async () => {
+    vi.mocked(db.updateUserRadius).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const userUpdating: User = {
+      ...mockUser,
+      conversation_state: {
+        step: ConversationStep.ONBOARDING_RADIUS,
+        context: { updating_location: true },
+        updated_at: '',
+      },
+    };
+
+    const result = await handleOnboardingRadius(userUpdating, makePayload('r3'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.IDLE);
+    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('atualizados'));
+    expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
+    expect(zapi.sendText).not.toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('figurinhas')
+    );
   });
 });

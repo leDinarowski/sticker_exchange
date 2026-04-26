@@ -168,6 +168,18 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-04-26 — Z-API trial account disables button/list message types
+
+**Hypothesis / Question:** Can we use Z-API button and list messages on a trial account?
+
+**Observation:** Z-API button (`sendButtons`) and list (`sendList`) message types are not available on trial accounts. All outbound messages fall back to numbered plain text (e.g. "1 - Opcao A\n2 - Opcao B\nResponda com o numero."). As a result, users always respond with plain text "1", "2", etc. — `listResponseMessage` and `buttonsResponseMessage` webhook events are never fired in this mode.
+
+**Impact:** ADR-007 still holds as design intent (button menus everywhere once upgraded). All handlers that route by button/list ID must also handle plain text number input. `onboarding-radius.ts` already follows this pattern with `TEXT_TO_RADIUS_ID`. IDLE routing and BROWSING selection parsing must follow the same convention.
+
+**Action:** Add `TEXT_TO_ROW_ID` maps to all menu-reading handlers (router IDLE case, BROWSING handler). Outbound fallback is already implemented via TEMP comments in `zapi.ts`. Remove those TEMP comments and enable real Z-API button/list calls once account is upgraded to a paid plan.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

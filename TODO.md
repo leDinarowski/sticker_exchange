@@ -65,10 +65,10 @@
 
 **Branch:** `feat/location`
 
-- [ ] Handler: IDLE + [Atualizar Localizacao] → request location share
-- [ ] On new location: H3-snap → update geometry
-- [ ] After location update: show radius menu, allow re-selection
-- [ ] Tests: H3 snapping correctness, geometry update, radius change
+- [DONE — 2026-04-26] Handler: IDLE + [Atualizar Localizacao] → request location share
+- [DONE — 2026-04-26] On new location: H3-snap → update geometry
+- [DONE — 2026-04-26] After location update: show radius menu, allow re-selection
+- [DONE — 2026-04-26] Tests: H3 snapping correctness, geometry update, radius change
 
 ---
 

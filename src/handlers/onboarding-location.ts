@@ -22,7 +22,12 @@ export async function handleOnboardingLocation(
   const locationResult = await saveUserLocation(user.id, latitude, longitude);
   if (locationResult.isErr()) return locationResult;
 
-  const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_RADIUS);
+  const updatingLocation = user.conversation_state?.context?.updating_location === true;
+  const transitionResult = await transitionState(
+    user.id,
+    ConversationStep.ONBOARDING_RADIUS,
+    updatingLocation ? { updating_location: true } : {}
+  );
   if (transitionResult.isErr()) return transitionResult;
 
   logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.ONBOARDING_RADIUS });
