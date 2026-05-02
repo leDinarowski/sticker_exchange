@@ -494,6 +494,40 @@ Check for `match_accept_*` / `match_decline_*` button IDs **before** the step-ba
 
 ---
 
+## ADR-021: Pre-Expiry Nudge Scheduling — GitHub Actions Cron
+
+**Status:** Accepted
+**Date:** 2026-05-02
+
+### Context
+Phase 7 requires a proactive pre-expiry nudge at the 20-hour mark of a 24-hour listing lifetime. Options evaluated:
+
+| Option | Frequency | Cost | Reliability |
+|---|---|---|---|
+| Vercel Cron Jobs (Hobby) | Max 1/day | Free | Good, but too infrequent |
+| Supabase pg_cron | Per minute | Free (Pro only) | Unknown on free tier |
+| GitHub Actions scheduled | Hourly | Free (2000 min/month) | Reliable, auditable |
+
+### Decision
+Use a **GitHub Actions scheduled workflow** (`cron: '0 * * * *'`) that calls a protected Vercel endpoint `POST /api/cron-expiry-nudge` with a `CRON_SECRET` bearer token.
+
+### Rationale
+- Vercel Hobby allows cron jobs only once per day — insufficient for a 3–4 hour nudge window.
+- pg_cron on Supabase free tier is uncertain (learnings.md documents this as an unknown). pg_cron also cannot directly call Z-API; it would need to invoke an HTTP endpoint anyway.
+- GitHub Actions free tier provides 2,000 minutes/month. An hourly cron averaging ~15s per run uses ~6 minutes/month — well within limits.
+- The workflow is visible in the repo, giving a clear audit trail of when nudges ran.
+- The endpoint is stateless: it queries `get_users_needing_expiry_nudge()` (a SQL function returning users with listings expiring in 3–4h and not already in CONFIRMING_INVENTORY), sends buttons, and transitions state.
+
+### Required GitHub Secrets
+- `VERCEL_API_URL`: the deployed Vercel URL (e.g. `https://sticker-exchange.vercel.app`)
+- `CRON_SECRET`: a random secret value also set as a Vercel env var
+
+### Consequences
+- If GitHub Actions is down or the cron is delayed, users may not receive the nudge exactly at 20h. Passive expiry at 24h still applies — the nudge is a courtesy, not a hard requirement.
+- The 3–4h query window means any listing created within the same hour will be nudged by the next cron run. A user who posts listings right after the cron fires waits up to 1h longer for the nudge — acceptable at MVP scale.
+
+---
+
 ## ADR-020: AWAITING_MATCH_RESPONSE Reused for Both Initiator and Respondent Roles
 
 **Status:** Accepted

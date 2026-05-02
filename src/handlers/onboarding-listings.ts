@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 import { transitionState } from '../db/users.js';
 import { ConversationStep, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
-import { applyListingUpdate } from '../services/listings.js';
+import { applyListingUpdate, bumpListingsExpiry } from '../services/listings.js';
 import { replaceWantedListings } from '../db/bilateral.js';
 import { runBilateralQuery } from './bilateral.js';
 import { parseListingInput, formatListingPreview } from '../utils/listing-parser.js';
@@ -22,6 +22,7 @@ export async function handleOnboardingListings(
 ): Promise<Result<void, Error>> {
   const ctx = user.conversation_state?.context ?? {};
   const pending = ctx.pending_listings;
+  const pendingOp = ctx.pending_op ?? 'set';
   const collectingWants = ctx.collecting_wants === true;
   const rePrompt = collectingWants ? WANTS_PROMPT : RE_PROMPT;
   const buttonId = payload.buttonsResponseMessage?.selectedButtonId ?? '';
@@ -41,13 +42,19 @@ export async function handleOnboardingListings(
         return runBilateralQuery(user, user.phone);
       }
 
-      const saveResult = await applyListingUpdate(user.id, 'sticker', { op: 'set', codes: pending });
+      const saveResult = await applyListingUpdate(user.id, 'sticker', { op: pendingOp, codes: pending });
       if (saveResult.isErr()) return saveResult;
+
+      // Reset expiry for all remaining listings so any differential update also extends the window
+      if (pendingOp !== 'set') {
+        const bumpResult = await bumpListingsExpiry(user.id, 'sticker');
+        if (bumpResult.isErr()) return bumpResult;
+      }
 
       const transitionResult = await transitionState(user.id, ConversationStep.IDLE);
       if (transitionResult.isErr()) return transitionResult;
 
-      logger.info({ userId: user.id, event: 'listings_saved', count: pending.length });
+      logger.info({ userId: user.id, event: 'listings_saved', count: pending.length, op: pendingOp });
       return showMainMenu(user.id, user.phone);
     }
 
@@ -75,11 +82,19 @@ export async function handleOnboardingListings(
     return sendText(user.phone, parseResult.error);
   }
 
-  const { codes } = parseResult.value;
+  const { op, codes } = parseResult.value;
   const formatted = formatListingPreview(codes);
-  const echoText = collectingWants
-    ? `Entendi que voce busca: ${formatted}. Esta correto?`
-    : `Entendi estas figurinhas: ${formatted}. Esta correto?`;
+
+  let echoText: string;
+  if (collectingWants) {
+    echoText = `Entendi que voce busca: ${formatted}. Esta correto?`;
+  } else if (op === 'add') {
+    echoText = `Adicionar estas figurinhas: ${formatted}. Esta correto?`;
+  } else if (op === 'remove') {
+    echoText = `Remover estas figurinhas: ${formatted}. Esta correto?`;
+  } else {
+    echoText = `Entendi estas figurinhas: ${formatted}. Esta correto?`;
+  }
 
   const sendResult = await sendButtons(
     user.phone,
@@ -91,11 +106,11 @@ export async function handleOnboardingListings(
   );
   if (sendResult.isErr()) return sendResult;
 
-  logger.info({ userId: user.id, event: collectingWants ? 'wants_pending' : 'listings_pending', count: codes.length });
+  logger.info({ userId: user.id, event: collectingWants ? 'wants_pending' : 'listings_pending', count: codes.length, op });
 
   const pendingCtx = collectingWants
     ? { collecting_wants: true, pending_listings: codes }
-    : { pending_listings: codes };
+    : { pending_listings: codes, pending_op: op };
 
   return transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS, pendingCtx);
 }

@@ -44,6 +44,12 @@ vi.mock('../../src/db/bilateral.js', () => ({
 vi.mock('../../src/handlers/connection-response.js', () => ({
   handleAwaitingMatchResponse: vi.fn(),
 }));
+vi.mock('../../src/handlers/update-listings.js', () => ({
+  handleUpdateListings: vi.fn(),
+}));
+vi.mock('../../src/handlers/confirming-inventory.js', () => ({
+  handleConfirmingInventory: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';
@@ -53,6 +59,8 @@ import * as updateLocationHandler from '../../src/handlers/update-location.js';
 import * as discoveryHandler from '../../src/handlers/discovery.js';
 import * as bilateralHandler from '../../src/handlers/bilateral.js';
 import * as connectionResponseHandler from '../../src/handlers/connection-response.js';
+import * as updateListingsHandler from '../../src/handlers/update-listings.js';
+import * as confirmingInventoryHandler from '../../src/handlers/confirming-inventory.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -254,6 +262,58 @@ describe('router', () => {
       expect.any(Object),
       '5511999999999'
     );
+  });
+
+  it('routes IDLE + text "3" to handleUpdateListings', async () => {
+    vi.mocked(updateListingsHandler.handleUpdateListings).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      text: { message: '3' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(updateListingsHandler.handleUpdateListings).toHaveBeenCalledWith(user, '5511999999999');
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
+  });
+
+  it('routes IDLE + listResponseMessage "update_listings" to handleUpdateListings', async () => {
+    vi.mocked(updateListingsHandler.handleUpdateListings).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      listResponseMessage: { selectedRowId: 'update_listings' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(updateListingsHandler.handleUpdateListings).toHaveBeenCalledWith(user, '5511999999999');
+  });
+
+  it('routes CONFIRMING_INVENTORY state to handleConfirmingInventory', async () => {
+    vi.mocked(confirmingInventoryHandler.handleConfirmingInventory).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.CONFIRMING_INVENTORY);
+
+    const result = await route(user, { phone: '5511999999999' }, makePayload());
+
+    expect(result.isOk()).toBe(true);
+    expect(confirmingInventoryHandler.handleConfirmingInventory).toHaveBeenCalledWith(
+      user,
+      expect.any(Object),
+      '5511999999999'
+    );
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
   });
 
   it('intercepts match_accept_ button regardless of user state', async () => {

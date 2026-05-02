@@ -28,6 +28,7 @@ export interface ConversationStateContext {
   discovery_list?: DiscoveryEntry[];
   selected_indices?: number[];
   pending_listings?: string[];
+  pending_op?: 'set' | 'add' | 'remove';
   pending_match_id?: string;
   pending_match_ids?: string[];
   pending_target_name?: string;

@@ -192,6 +192,18 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-05-02 — Listing handler silently dropped the parsed op type — all differential updates were doing full replace
+
+**Hypothesis / Question:** Phase 2 implemented differential parsing (remover/adicionar). Was the op type being used on confirmation?
+
+**Observation:** No. `onboarding-listings.ts` stored only `pending_listings: codes[]` in context, discarding the `op` field from `ParseResult`. On confirmation it always called `applyListingUpdate(userId, domain, { op: 'set', codes: pending })`, regardless of whether the user had typed "adicionar" or "remover". A user who typed "adicionar BRA5" would have ALL their existing listings deleted and replaced with just BRA5. The `applyListingUpdate` function correctly supported 'add' and 'remove' ops, but the calling code never used them.
+
+**Impact:** Differential update flow was broken from Phase 2. Fixed in Phase 7 by adding `pending_op?: 'set' | 'add' | 'remove'` to `ConversationStateContext` and storing it alongside `pending_listings`.
+
+**Action:** Added `pending_op` to context. Handler now reads `ctx.pending_op ?? 'set'` on confirmation. Also added `bumpListingsExpiry` call after 'add'/'remove' operations to reset expiry for remaining listings. Added 4 new differential tests. Rule: whenever a multi-step flow stores intermediate state in context, verify that ALL relevant fields (not just codes/data, but also the operation type) are round-tripped through the context.
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation

@@ -2,6 +2,32 @@ import { ok, err, Result } from 'neverthrow';
 import { supabase } from '../db/client.js';
 import { ParseResult } from '../utils/listing-parser.js';
 
+export async function clearUserListings(
+  userId: string,
+  domain: string
+): Promise<Result<void, Error>> {
+  const { error } = await supabase
+    .from('listings')
+    .delete()
+    .eq('user_id', userId)
+    .eq('domain', domain);
+  return error ? err(new Error(error.message)) : ok(undefined);
+}
+
+export async function bumpListingsExpiry(
+  userId: string,
+  domain: string
+): Promise<Result<void, Error>> {
+  const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from('listings')
+    .update({ expires_at: expiresAt })
+    .eq('user_id', userId)
+    .eq('domain', domain)
+    .gt('expires_at', new Date().toISOString());
+  return error ? err(new Error(error.message)) : ok(undefined);
+}
+
 export async function applyListingUpdate(
   userId: string,
   domain: string,
