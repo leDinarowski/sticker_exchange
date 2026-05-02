@@ -11,6 +11,7 @@ vi.mock('../../src/services/zapi.js', () => ({
 }));
 vi.mock('../../src/services/listings.js', () => ({
   applyListingUpdate: vi.fn(),
+  bumpListingsExpiry: vi.fn(),
 }));
 vi.mock('../../src/db/bilateral.js', () => ({
   replaceWantedListings: vi.fn(),
@@ -105,7 +106,7 @@ describe('handleOnboardingListings — parse phase', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { pending_listings: ['BRA5', 'ARG3'] }
+      { pending_listings: ['BRA5', 'ARG3'], pending_op: 'set' }
     );
   });
 
@@ -148,6 +149,8 @@ describe('handleOnboardingListings — confirmation phase', () => {
       'sticker',
       { op: 'set', codes: ['BRA5', 'ARG3'] }
     );
+    // bumpListingsExpiry not called for 'set' op (full replace already resets expiry)
+    expect(listingsService.bumpListingsExpiry).not.toHaveBeenCalled();
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.IDLE);
     expect(idle.showMainMenu).toHaveBeenCalledWith('uuid-1', '5511999999999');
   });
@@ -206,7 +209,7 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { pending_listings: ['ARG3'] }
+      { pending_listings: ['ARG3'], pending_op: 'set' }
     );
   });
 
@@ -228,6 +231,68 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(result.isOk()).toBe(true);
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
     expect(zapi.sendText).toHaveBeenCalled();
+  });
+});
+
+describe('handleOnboardingListings — differential update (add/remove)', () => {
+  it('stores pending_op: add when user sends "adicionar BRA5"', async () => {
+    const user = makeUser();
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    await handleOnboardingListings(user, makeTextPayload('adicionar BRA5'));
+
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      { pending_listings: ['BRA5'], pending_op: 'add' }
+    );
+  });
+
+  it('stores pending_op: remove when user sends "remover BRA5"', async () => {
+    const user = makeUser();
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    await handleOnboardingListings(user, makeTextPayload('remover BRA5'));
+
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      { pending_listings: ['BRA5'], pending_op: 'remove' }
+    );
+  });
+
+  it('calls applyListingUpdate with op:add and bumpListingsExpiry on confirm', async () => {
+    const user = makeUser(['BRA5'], { pending_op: 'add' });
+    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
+    vi.mocked(listingsService.bumpListingsExpiry).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('confirm_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).toHaveBeenCalledWith(
+      'uuid-1', 'sticker', { op: 'add', codes: ['BRA5'] }
+    );
+    expect(listingsService.bumpListingsExpiry).toHaveBeenCalledWith('uuid-1', 'sticker');
+  });
+
+  it('calls applyListingUpdate with op:remove and bumpListingsExpiry on confirm', async () => {
+    const user = makeUser(['BRA5'], { pending_op: 'remove' });
+    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
+    vi.mocked(listingsService.bumpListingsExpiry).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('confirm_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).toHaveBeenCalledWith(
+      'uuid-1', 'sticker', { op: 'remove', codes: ['BRA5'] }
+    );
+    expect(listingsService.bumpListingsExpiry).toHaveBeenCalledWith('uuid-1', 'sticker');
   });
 });
 

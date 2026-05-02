@@ -14,7 +14,7 @@ A proximity-based P2P matchmaking engine. Initial use case: World Cup sticker tr
 
 ## Tech Stack
 
-- **WhatsApp**: Evolution API (self-hosted, Railway)
+- **WhatsApp**: Z-API (managed SaaS)
 - **Backend/Webhook**: Vercel serverless (TypeScript)
 - **Database**: Supabase (PostgreSQL + PostGIS)
 - **Testing**: Vitest
@@ -39,6 +39,21 @@ npm run dev
 # 5. Run tests
 npm test
 ```
+
+## Implementation Status
+
+Phases 1–7 are implemented and tested:
+
+| Phase | Feature |
+|---|---|
+| 0 | Infrastructure & scaffolding |
+| 1 | Onboarding (name, terms, location, radius) |
+| 2 | Listing registration (parser, echo-back, expiry) |
+| 3 | Location & radius update from main menu |
+| 4 | Discovery board (Olhar em Volta) |
+| 5 | Bilateral matching (Match Perfeito) |
+| 6 | Connection flow (consent, WhatsApp group creation) |
+| 7 | Inventory management (update, pre-expiry nudge) |
 
 ## Branch Strategy
 

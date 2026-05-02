@@ -1,0 +1,19 @@
+name: Expiry Nudge Cron
+
+on:
+  schedule:
+    # Runs at minute 0 of every hour (UTC).
+    # Each run hits /api/cron-expiry-nudge which queries listings expiring
+    # in the next 3–4 hours — i.e. the 20–21h mark of their 24h lifetime.
+    - cron: '0 * * * *'
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send expiry nudge
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.VERCEL_API_URL }}/api/cron-expiry-nudge" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

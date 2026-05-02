@@ -14,6 +14,8 @@ import { handleUpdateLocation } from '../handlers/update-location.js';
 import { handleDiscovery, handleBrowsing } from '../handlers/discovery.js';
 import { handleBilateral } from '../handlers/bilateral.js';
 import { handleAwaitingMatchResponse } from '../handlers/connection-response.js';
+import { handleUpdateListings } from '../handlers/update-listings.js';
+import { handleConfirmingInventory } from '../handlers/confirming-inventory.js';
 
 const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '1': 'discovery',
@@ -78,7 +80,7 @@ export async function route(
       if (rowId === 'update_location') return handleUpdateLocation(user, phone);
       if (rowId === 'discovery') return handleDiscovery(user, phone);
       if (rowId === 'bilateral') return handleBilateral(user, phone);
-      // 'update_listings' → Phase 7
+      if (rowId === 'update_listings') return handleUpdateListings(user, phone);
       return showMainMenu(user.id, phone);
     }
 
@@ -89,7 +91,7 @@ export async function route(
       return handleAwaitingMatchResponse(user, payload, phone);
 
     case ConversationStep.CONFIRMING_INVENTORY:
-      return showMainMenu(user.id, phone);
+      return handleConfirmingInventory(user, payload, phone);
 
     case ConversationStep.NEW:
     default:

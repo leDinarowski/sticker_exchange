@@ -124,16 +124,16 @@
 
 **Branch:** `feat/inventory`
 
-- [ ] Handler: IDLE + [Atualizar Figurinhas] → show current listings count → ask for update
-- [ ] Support: full replacement (send new list) + differential (remover/adicionar)
-- [ ] Reset expires_at on any update
-- [ ] Pre-expiry job (at 20h mark): send button message: [Sim, ainda tenho] [Atualizar Figurinhas] [Nao tenho mais]
-- [ ] State → CONFIRMING_INVENTORY
-- [ ] [Sim, ainda tenho] → reset expires_at → IDLE
-- [ ] [Atualizar Figurinhas] → re-enter listing update flow
-- [ ] [Nao tenho mais] → delete all listings → IDLE → confirm deletion
-- [ ] No response in 4h → listings expire silently (cron/pg_cron)
-- [ ] Tests: all three button paths, expiry job logic, silent expiry
+- [DONE — 2026-05-02] Handler: IDLE + [Atualizar Figurinhas] → show current listings count → ask for update
+- [DONE — 2026-05-02] Support: full replacement (send new list) + differential (remover/adicionar)
+- [DONE — 2026-05-02] Reset expires_at on any update
+- [DONE — 2026-05-02] Pre-expiry job (at 20h mark): send button message: [Sim, ainda tenho] [Atualizar Figurinhas] [Nao tenho mais]
+- [DONE — 2026-05-02] State → CONFIRMING_INVENTORY
+- [DONE — 2026-05-02] [Sim, ainda tenho] → reset expires_at → IDLE
+- [DONE — 2026-05-02] [Atualizar Figurinhas] → re-enter listing update flow
+- [DONE — 2026-05-02] [Nao tenho mais] → delete all listings → IDLE → confirm deletion
+- [DONE — 2026-05-02] No response in 4h → listings expire silently (passive — expires_at passes)
+- [DONE — 2026-05-02] Tests: all three button paths, expiry job logic, cron endpoint auth
 
 ---
 
