@@ -226,3 +226,15 @@ The sticker_context.md file contains the complete reference including all 48 tea
 - Whether the "Olhar em Volta" vs "Match Perfeito" split is understood without explanation
 - Optimal H3 resolution: 8 (~460m) chosen for privacy, but resolution 9 (~174m) may be better in dense urban areas
 - Whether pg_cron on Supabase free tier is sufficient for 20h pre-expiry job scheduling, or if an external cron (GitHub Actions scheduled workflow) is more reliable
+
+---
+
+## 2026-05-03 — pg_cron requires Supabase dashboard toggle before migration
+
+**Hypothesis / Question:** Can `CREATE EXTENSION IF NOT EXISTS pg_cron` run in a Supabase migration file like any other extension?
+
+**Observation:** Supabase requires pg_cron to be enabled in the dashboard (Database → Extensions) before the migration SQL runs. Running `CREATE EXTENSION` without the dashboard toggle results in a permission error. This is a Supabase-specific restriction — pg_cron is treated as a trusted extension that must be explicitly opted into via the UI, not just SQL.
+
+**Impact:** The migration `20260503010000_pg_cron_expiry_sweep.sql` has a documented pre-step. The `npm run migrate` workflow must be preceded by the manual dashboard toggle. See ADR-023 for the broader pg_cron decision.
+
+**Action:** Added a prominent comment in the migration file. Added to PR checklist. For future reference: any extension in Supabase's "restricted" list needs a UI toggle first.

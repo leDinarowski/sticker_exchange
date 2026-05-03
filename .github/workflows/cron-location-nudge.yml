@@ -1,0 +1,20 @@
+name: Location Nudge Cron
+
+on:
+  schedule:
+    # Daily at 10:00 UTC (07:00 BRT).
+    # The SQL function filters to users whose location_updated_at >= 7 days ago,
+    # so each user is nudged on their own 7-day cycle, not a fixed weekday.
+    - cron: '0 10 * * *'
+  workflow_dispatch:
+
+jobs:
+  nudge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Send location nudge
+        run: |
+          curl --fail --silent --show-error \
+            -X POST "${{ secrets.VERCEL_API_URL }}/api/cron-location-nudge" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -H "Content-Type: application/json"

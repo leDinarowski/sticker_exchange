@@ -55,6 +55,9 @@ export interface User {
   consented_at: string | null;
   refused_at: string | null;
   created_at: string;
+  rate_window_start: string | null;
+  rate_window_count: number;
+  location_updated_at: string | null;
 }
 
 // ─── Listings ─────────────────────────────────────────────────────────────────

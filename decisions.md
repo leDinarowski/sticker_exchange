@@ -555,3 +555,48 @@ Use **Option B**: `AWAITING_MATCH_RESPONSE` serves both roles. The handler dispa
 ### Consequences
 - `ctx.pending_match_id` (singular) signals respondent role; `ctx.pending_match_ids` (array) signals initiator role.
 - A user cannot be simultaneously in both roles within the same state invocation — if they receive a new match request while already in initiator role, the newer request overwrites their context. Acceptable for MVP.
+
+---
+
+## ADR-022: Rate Limiting — DB RPC with FOR UPDATE (not Redis)
+
+**Status:** Accepted
+**Date:** 2026-05-03
+
+### Context
+Vercel serverless functions are stateless — each invocation is isolated, so in-memory counters don't work. Standard serverless rate limiting uses Redis (e.g. Upstash). We needed max 10 messages/minute per user to prevent bot loops.
+
+### Decision
+Use a Supabase PostgreSQL RPC (`check_rate_limit`) with `FOR UPDATE` row locking to atomically check and increment a per-user sliding window stored in two new columns (`rate_window_start`, `rate_window_count`) on the `users` table.
+
+### Rationale
+- Avoids adding Redis as a new dependency (extra cost, extra operational surface, extra env vars).
+- `FOR UPDATE` serialises concurrent invocations for the same user without application-level coordination — correct under Vercel's parallel execution model.
+- A WhatsApp user sending 10 messages/minute is the absolute ceiling for legitimate human use; a slightly higher latency on the rate-limit RPC (a few ms) is undetectable.
+- Fails open: if the RPC itself errors, the message is allowed through. Blocking all traffic due to a transient DB issue is worse than briefly allowing extra messages.
+
+### Risks & Mitigations
+- **DB contention**: Only per-user, not global. Two users are never competing for the same lock.
+- **Clock drift**: Uses `NOW()` inside the DB transaction — no application-side timestamp needed, so clock skew between Vercel instances is irrelevant.
+- **Migration dependency**: Requires `rate_window_start`/`rate_window_count` columns and the RPC to exist before the webhook code is deployed. Migration is idempotent (`IF NOT EXISTS` / `CREATE OR REPLACE`).
+
+---
+
+## ADR-023: Location Nudge — Per-User 7-Day Clock via location_updated_at
+
+**Status:** Accepted
+**Date:** 2026-05-03
+
+### Context
+The weekly location nudge needs to respect each user's individual update history — nudging on a fixed weekday would notify a user who updated the day before, which is annoying and unnecessary.
+
+### Decision
+Add `location_updated_at TIMESTAMPTZ` to `users`. Set it whenever the user shares a location (via `update_user_location` RPC), and also reset it when a nudge is sent (`markLocationNudgeSent`). The nudge query filters to users where this column is NULL or older than 7 days. The GitHub Actions cron runs **daily** (not weekly) so each user is caught on their individual 7-day anniversary.
+
+### Rationale
+- No separate `last_nudge_at` column needed — `location_updated_at` serves dual purpose: "when did they last share a location" and "when did we last remind them".
+- Daily cron is cheap (GitHub Actions free tier, one curl call per day).
+- `location_updated_at IS NULL` branch handles existing users onboarded before this column was added.
+
+### Consequences
+- A user who never taps [Atualizar Localizacao] after receiving a nudge will get nudged again in 7 days. This is the intended behaviour — we always want their location to be relatively fresh.

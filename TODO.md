@@ -141,13 +141,13 @@
 
 **Branch:** `feat/ops`
 
-- [ ] pg_cron: daily sweep to hard-delete expired listings (after grace period)
-- [ ] Weekly nudge: "Sua localizacao ainda esta correta? Use o menu para atualizar."
-- [ ] Rate limiting: max 10 messages/minute per user (prevents loops)
-- [ ] Health check endpoint: `GET /api/health` → confirms Supabase + Z-API connectivity
-- [ ] All handlers emit structured logs: `{ userId, event, durationMs, outcome }`
-- [ ] Error boundary: unhandled state/message type → friendly fallback → IDLE
-- [ ] Tests: rate limiter, health check, error boundary fallback
+- [DONE — 2026-05-03] pg_cron: daily sweep to hard-delete expired listings (after grace period)
+- [DONE — 2026-05-03] Weekly nudge: "Sua localizacao ainda esta correta? Use o menu para atualizar."
+- [DONE — 2026-05-03] Rate limiting: max 10 messages/minute per user (prevents loops)
+- [DONE — 2026-05-03] Health check endpoint: `GET /api/health` → confirms Supabase + Z-API connectivity
+- [DONE — 2026-05-03] All handlers emit structured logs: `{ userId, event, durationMs, outcome }`
+- [DONE — 2026-05-03] Error boundary: unhandled state/message type → friendly fallback → IDLE
+- [DONE — 2026-05-03] Tests: rate limiter, health check, error boundary fallback
 
 ---
 
