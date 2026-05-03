@@ -151,6 +151,18 @@
 
 ---
 
+## Phase 9 — Meeting Place Suggestions
+
+**Branch:** `feat/meeting-places`
+
+- [DONE — 2026-05-03] `meeting_places` table with GIST index + `find_nearest_meeting_place_for_users` RPC
+- [DONE — 2026-05-03] Meeting place suggestion sent in group after connection (non-fatal: missing place → welcome message only)
+- [DONE — 2026-05-03] 3 km radius from midpoint of both users' H3 cell centers; closest place only
+- [DONE — 2026-05-03] Message format: name, address/neighborhood, distance in m or km (BR decimal comma)
+- [DONE — 2026-05-03] Tests: DB query (5), formatter (9), connection-response additions (3)
+
+---
+
 ## Backlog — Future
 
 - [ ] Bilateral matching refinement: show overlap count ("3 figurinhas em comum")

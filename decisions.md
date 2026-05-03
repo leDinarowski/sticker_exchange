@@ -600,3 +600,28 @@ Add `location_updated_at TIMESTAMPTZ` to `users`. Set it whenever the user share
 
 ### Consequences
 - A user who never taps [Atualizar Localizacao] after receiving a nudge will get nudged again in 7 days. This is the intended behaviour — we always want their location to be relatively fresh.
+
+---
+
+## ADR-024: Meeting Places — Manual DB Seeding, Non-Fatal Query, No Domain Column
+
+**Status:** Accepted
+**Date:** 2026-05-03
+
+### Context
+Phase 9 introduces a curated table of physical locations (cafes, bookstores) that the bot suggests after a group is created. We needed to decide: (1) how places are added, (2) what happens when no place is found or the query fails, (3) whether to scope places by domain.
+
+### Decision
+1. **Manual DB seeding**: Places are inserted via Supabase SQL editor or Table Editor. No admin UI.
+2. **Non-fatal query**: The meeting place lookup never blocks the connection flow. Failure or empty result logs a `warn` and the function continues. Users always get the group created.
+3. **No `domain` column**: All active places are candidates for any trade type. A `domain` column can be added later when a second domain is validated.
+
+### Rationale
+1. The number of meeting places is small and changes infrequently at MVP scale. An admin UI would add scope and complexity with no short-term payoff.
+2. The connection is the high-value event. Losing a group creation because of a missing place would be a worse UX than no place suggestion at all.
+3. There is only one domain in production today. Premature domain scoping adds a column and filter that no query actually needs yet.
+
+### Risks & Mitigations
+- **Stale data**: Manually-added places can become outdated (business closed, moved). Mitigation: `active` boolean flag allows deactivation without deletion; no automated sync needed for MVP.
+- **Missing GIST index**: The query uses `ST_DWithin` which requires the GIST index created in the migration. If the index is missing, the query will full-scan `meeting_places`. Since the table is small at MVP, this is not a correctness issue, but should be verified post-migration.
+

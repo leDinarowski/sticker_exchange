@@ -229,6 +229,48 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-05-03 — Meeting places: how to insert and deactivate
+
+**Hypothesis / Question:** How do operators add or remove meeting places without an admin UI?
+
+**Observation:** All place management is done via Supabase SQL editor or Table Editor. The `active` column is the on/off switch — no row is ever hard-deleted in normal operation.
+
+**Insert a new place:**
+```sql
+INSERT INTO meeting_places (name, address, neighborhood, location)
+VALUES (
+  'Cafe do Joao',
+  'Rua Augusta, 123',
+  'Pinheiros',
+  ST_SetSRID(ST_MakePoint(-46.6543, -23.5629), 4326)
+  --                       ^ lng      ^ lat
+);
+```
+Note: `ST_MakePoint` takes **(longitude, latitude)** — not the other way around.
+
+**Deactivate a place** (hides from suggestions, preserves history):
+```sql
+UPDATE meeting_places SET active = false WHERE name = 'Cafe do Joao';
+-- or by ID:
+UPDATE meeting_places SET active = false WHERE id = '<uuid>';
+```
+
+**Reactivate:**
+```sql
+UPDATE meeting_places SET active = true WHERE id = '<uuid>';
+```
+
+**List all active places:**
+```sql
+SELECT id, name, neighborhood, active FROM meeting_places ORDER BY created_at DESC;
+```
+
+**Impact:** Confirmed that manual management is sufficient for MVP. See ADR-024 for the rationale against an admin UI.
+
+**Action:** Keep these snippets here. If volume grows, consider a lightweight Supabase Edge Function or a simple admin form.
+
+---
+
 ## 2026-05-03 — pg_cron requires Supabase dashboard toggle before migration
 
 **Hypothesis / Question:** Can `CREATE EXTENSION IF NOT EXISTS pg_cron` run in a Supabase migration file like any other extension?
