@@ -181,11 +181,29 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
-## Phase 9 — First Real User Test
+## Phase 9 — Meeting Place Suggestions
+
+**Goal:** When two users connect, the bot suggests a nearby business as a physical meeting point for the trade.
+
+**Depends on:** Phase 6 (connection flow must exist)
+
+**Deliverables:**
+- `meeting_places` table (name, address, neighborhood, geometry) with GIST index
+- `find_nearest_meeting_place_for_users` RPC: computes midpoint of both users' H3 cells, returns closest active place within 3 km
+- Place suggestion sent as a follow-up message in the group after creation (non-fatal: no place → welcome message only)
+- Manual data entry via Supabase SQL (no admin UI for now)
+
+**Done when:** Two connected users in the same area receive the group welcome message followed by the nearest place name, address, and distance. Users in areas with no registered places receive only the welcome message.
+
+**Estimated effort:** 1 day
+
+---
+
+## Phase 10 — First Real User Test
 
 **Goal:** 5–10 real users complete the full flow in a controlled test.
 
-**Depends on:** Phase 8
+**Depends on:** Phase 9
 
 **Activities:**
 - Recruit testers from a real sticker-trading context

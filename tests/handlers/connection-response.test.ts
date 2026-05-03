@@ -18,12 +18,20 @@ vi.mock('../../src/services/zapi.js', () => ({
 vi.mock('../../src/handlers/idle.js', () => ({
   showMainMenu: vi.fn(),
 }));
+vi.mock('../../src/db/meeting-places.js', () => ({
+  findNearestMeetingPlace: vi.fn(),
+}));
+vi.mock('../../src/utils/format-meeting-place.js', () => ({
+  formatMeetingPlaceMessage: vi.fn(),
+}));
 
 import { handleAwaitingMatchResponse } from '../../src/handlers/connection-response.js';
 import * as usersDb from '../../src/db/users.js';
 import * as matchesDb from '../../src/db/matches.js';
 import * as zapi from '../../src/services/zapi.js';
 import * as idleHandler from '../../src/handlers/idle.js';
+import * as meetingPlacesDb from '../../src/db/meeting-places.js';
+import * as formatMeetingPlace from '../../src/utils/format-meeting-place.js';
 import { ConversationStep, Match, MatchStatus, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -82,7 +90,11 @@ function makeTextPayload(text: string): WebhookPayload {
   };
 }
 
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  // Default: no place found — keeps existing tests unaffected by the new feature.
+  vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(ok(null));
+});
 
 // ─── Respondent: accept path ─────────────────────────────────────────────────
 
@@ -348,5 +360,94 @@ describe('handleAwaitingMatchResponse — DB error propagates', () => {
 
     expect(result.isErr()).toBe(true);
     expect(zapi.createGroup).not.toHaveBeenCalled();
+  });
+});
+
+// ─── Meeting place suggestion ────────────────────────────────────────────────
+
+function setupAcceptMocks(userA: User, _userB: User): void {
+  vi.mocked(matchesDb.getMatchById).mockResolvedValue(ok(makePendingMatch()));
+  vi.mocked(matchesDb.updateMatchStatus).mockResolvedValue(ok(undefined));
+  vi.mocked(usersDb.findUserById).mockResolvedValue(ok(userA));
+  vi.mocked(zapi.createGroup).mockResolvedValue(ok('groupid@g.us'));
+  vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+  vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+  vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+  // Silence the no-place path by default
+  vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(ok(null));
+}
+
+describe('meeting place suggestion — place found', () => {
+  it('sends place message to group after welcome when a nearby place exists', async () => {
+    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: MATCH_ID,
+      pending_target_name: 'Alice',
+    });
+    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
+
+    setupAcceptMocks(userA, userB);
+    const mockPlace = { id: 'p1', name: 'Cafe X', address: 'Rua Y', neighborhood: 'Pinheiros', distance_m: 300 };
+    vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(ok(mockPlace));
+    vi.mocked(formatMeetingPlace.formatMeetingPlaceMessage).mockReturnValue('MSG_PLACE');
+
+    const result = await handleAwaitingMatchResponse(
+      userB,
+      makeButtonPayload(`match_accept_${MATCH_ID}`),
+      userB.phone
+    );
+
+    expect(result.isOk()).toBe(true);
+    expect(formatMeetingPlace.formatMeetingPlaceMessage).toHaveBeenCalledWith(mockPlace);
+    expect(zapi.sendText).toHaveBeenCalledWith('groupid@g.us', 'MSG_PLACE');
+    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
+  });
+});
+
+describe('meeting place suggestion — no place found', () => {
+  it('completes the flow normally without a place message when no place is within radius', async () => {
+    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: MATCH_ID,
+      pending_target_name: 'Alice',
+    });
+    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
+
+    setupAcceptMocks(userA, userB);
+    vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(ok(null));
+
+    const result = await handleAwaitingMatchResponse(
+      userB,
+      makeButtonPayload(`match_accept_${MATCH_ID}`),
+      userB.phone
+    );
+
+    expect(result.isOk()).toBe(true);
+    expect(formatMeetingPlace.formatMeetingPlaceMessage).not.toHaveBeenCalled();
+    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
+  });
+});
+
+describe('meeting place suggestion — query fails (non-fatal)', () => {
+  it('continues the flow and returns ok when the meeting place RPC errors', async () => {
+    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: MATCH_ID,
+      pending_target_name: 'Alice',
+    });
+    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
+
+    setupAcceptMocks(userA, userB);
+    vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(err(new Error('rpc failed')));
+
+    const result = await handleAwaitingMatchResponse(
+      userB,
+      makeButtonPayload(`match_accept_${MATCH_ID}`),
+      userB.phone
+    );
+
+    // Non-fatal: result is still ok despite the query failure
+    expect(result.isOk()).toBe(true);
+    // Connection was marked CONNECTED regardless
+    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
+    // No place message sent
+    expect(formatMeetingPlace.formatMeetingPlaceMessage).not.toHaveBeenCalled();
   });
 });

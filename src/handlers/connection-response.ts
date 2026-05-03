@@ -14,6 +14,8 @@ import {
 import { ConversationStep, MatchStatus, User } from '../types/index.js';
 import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { findNearestMeetingPlace } from '../db/meeting-places.js';
+import { formatMeetingPlaceMessage } from '../utils/format-meeting-place.js';
 
 // ─── Entry point ────────────────────────────────────────────────────────────
 
@@ -123,6 +125,17 @@ async function processAccept(
 
   const welcome = await sendText(groupPhone, 'Combinado! Este grupo foi criado para voces organizarem a troca.');
   if (welcome.isErr()) return welcome;
+
+  // Meeting place suggestion — non-fatal: failure never blocks the connection flow.
+  const placeResult = await findNearestMeetingPlace(userA.id, userB.id);
+  if (placeResult.isErr()) {
+    logger.warn({ event: 'meeting_place_query_failed', matchId, error: placeResult.error.message });
+  } else if (placeResult.value) {
+    const suggest = await sendText(groupPhone, formatMeetingPlaceMessage(placeResult.value));
+    if (suggest.isErr()) {
+      logger.warn({ event: 'meeting_place_send_failed', matchId, error: suggest.error.message });
+    }
+  }
 
   const upd2 = await updateMatchStatus(matchId, MatchStatus.CONNECTED);
   if (upd2.isErr()) return upd2;
