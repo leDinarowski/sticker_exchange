@@ -27,8 +27,7 @@ async function zapiPost(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    return err(new Error(`Z-API ${endpoint} failed (${res.status}): ${text}`));
+    return err(new Error(`Z-API ${endpoint} failed (${res.status})`));
   }
 
   return ok(undefined);
@@ -49,8 +48,7 @@ async function zapiPostData<T>(
   });
 
   if (!res.ok) {
-    const text = await res.text().catch(() => res.statusText);
-    return err(new Error(`Z-API ${endpoint} failed (${res.status}): ${text}`));
+    return err(new Error(`Z-API ${endpoint} failed (${res.status})`));
   }
 
   const data = await res.json() as T;
@@ -106,7 +104,7 @@ export async function createGroup(
   if (result.isErr()) return err(result.error);
   const groupPhone = (result.value['phone'] ?? result.value['groupPhone'] ?? result.value['id']) as string | undefined;
   if (!groupPhone) {
-    return err(new Error(`create-group returned no phone field: ${JSON.stringify(result.value)}`));
+    return err(new Error('create-group: response missing phone field'));
   }
   return ok(groupPhone);
 }

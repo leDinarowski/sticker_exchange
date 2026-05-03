@@ -64,6 +64,8 @@ export interface User {
   location_updated_at: string | null;
 }
 
+export type DiscoveryUser = Pick<User, 'id' | 'phone' | 'conversation_state'>;
+
 // ─── Listings ─────────────────────────────────────────────────────────────────
 
 export interface Listing {

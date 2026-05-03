@@ -3,7 +3,7 @@ import { logger } from '../utils/logger.js';
 import { transitionState } from '../db/users.js';
 import { findNearbyUsers } from '../db/discovery.js';
 import { findBilateralMatches } from '../db/bilateral.js';
-import { ConversationStep, User } from '../types/index.js';
+import { ConversationStep, User, DiscoveryUser } from '../types/index.js';
 import { sendText } from '../services/zapi.js';
 import { formatDiscoveryList, formatBilateralList } from '../utils/format-discovery.js';
 import { showMainMenu } from './idle.js';
@@ -34,7 +34,7 @@ export async function handleAwaitingDiscovery(
 }
 
 export async function processDiscoveryWatch(
-  user: User
+  user: DiscoveryUser
 ): Promise<Result<'notified' | 'exhausted' | 'pending', Error>> {
   const ctx = user.conversation_state?.context ?? {};
   const watchMode = ctx.watch_mode ?? 'discovery';

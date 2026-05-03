@@ -52,7 +52,7 @@ export async function route(
   const phone = identifier.phone ?? identifier.waUsername ?? '';
 
   if (!user) {
-    return withTiming(identifier.phone ?? 'unknown', ConversationStep.NEW, () =>
+    return withTiming('unknown', ConversationStep.NEW, () =>
       handleNew(identifier)
     );
   }
