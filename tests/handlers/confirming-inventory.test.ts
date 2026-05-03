@@ -12,6 +12,9 @@ vi.mock('../../src/services/listings.js', () => ({
   bumpListingsExpiry: vi.fn(),
   clearUserListings: vi.fn(),
 }));
+vi.mock('../../src/db/listings.js', () => ({
+  getUserActiveListingsCount: vi.fn(),
+}));
 vi.mock('../../src/handlers/idle.js', () => ({
   showMainMenu: vi.fn(),
 }));
@@ -20,18 +23,19 @@ import { handleConfirmingInventory, sendExpiryNudge } from '../../src/handlers/c
 import * as usersDb from '../../src/db/users.js';
 import * as zapi from '../../src/services/zapi.js';
 import * as listingsService from '../../src/services/listings.js';
+import * as listingsDb from '../../src/db/listings.js';
 import * as idle from '../../src/handlers/idle.js';
 import { ConversationStep, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
-function makeUser(): User {
+function makeUser(ctx: Record<string, unknown> = {}): User {
   return {
     id: 'uuid-1',
     phone: '5511999999999',
     wa_username: null,
     name: 'Maria',
     radius_km: 3,
-    conversation_state: { step: ConversationStep.CONFIRMING_INVENTORY, context: {}, updated_at: '' },
+    conversation_state: { step: ConversationStep.CONFIRMING_INVENTORY, context: ctx, updated_at: '' },
     consented_at: '2026-04-25T00:00:00Z',
     refused_at: null,
     created_at: '',
@@ -112,8 +116,9 @@ describe('handleConfirmingInventory — [Sim, ainda tenho]', () => {
 });
 
 describe('handleConfirmingInventory — [Atualizar Figurinhas]', () => {
-  it('transitions to ONBOARDING_LISTINGS and sends update prompt on button tap', async () => {
+  it('shows count, transitions to ONBOARDING_LISTINGS and sends update prompt on button tap', async () => {
     const user = makeUser();
+    vi.mocked(listingsDb.getUserActiveListingsCount).mockResolvedValue(ok(5));
     vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
@@ -128,6 +133,7 @@ describe('handleConfirmingInventory — [Atualizar Figurinhas]', () => {
 
   it('handles text "2" (trial account fallback)', async () => {
     const user = makeUser();
+    vi.mocked(listingsDb.getUserActiveListingsCount).mockResolvedValue(ok(3));
     vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
@@ -138,42 +144,84 @@ describe('handleConfirmingInventory — [Atualizar Figurinhas]', () => {
   });
 });
 
-describe('handleConfirmingInventory — [Nao tenho mais]', () => {
-  it('clears listings, transitions to IDLE, confirms deletion, shows main menu on button tap', async () => {
+describe('handleConfirmingInventory — [Não tenho mais] — confirmation step', () => {
+  it('shows confirmation prompt when user taps "Não tenho mais" button (does NOT clear yet)', async () => {
     const user = makeUser();
+    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const result = await handleConfirmingInventory(user, makeButtonPayload('inv_clear'), user.phone);
+
+    expect(result.isOk()).toBe(true);
+    // Sets pending_clear flag before showing confirmation
+    expect(usersDb.transitionState).toHaveBeenCalledWith(
+      user.id,
+      ConversationStep.CONFIRMING_INVENTORY,
+      { pending_clear: true }
+    );
+    // Shows confirmation buttons — does NOT clear listings yet
+    expect(zapi.sendButtons).toHaveBeenCalledWith(
+      user.phone,
+      expect.stringContaining('Tem certeza'),
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'clear_confirm' }),
+        expect.objectContaining({ id: 'clear_cancel' }),
+      ])
+    );
+    expect(listingsService.clearUserListings).not.toHaveBeenCalled();
+  });
+
+  it('handles text "3" — also shows confirmation (trial account fallback)', async () => {
+    const user = makeUser();
+    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const result = await handleConfirmingInventory(user, makeTextPayload('3'), user.phone);
+
+    expect(result.isOk()).toBe(true);
+    expect(usersDb.transitionState).toHaveBeenCalledWith(
+      user.id,
+      ConversationStep.CONFIRMING_INVENTORY,
+      { pending_clear: true }
+    );
+    expect(listingsService.clearUserListings).not.toHaveBeenCalled();
+  });
+
+  it('clears listings when user confirms with clear_confirm button', async () => {
+    const user = makeUser({ pending_clear: true });
     vi.mocked(listingsService.clearUserListings).mockResolvedValue(ok(undefined));
     vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
     vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
 
-    const result = await handleConfirmingInventory(user, makeButtonPayload('inv_clear'), user.phone);
+    const result = await handleConfirmingInventory(user, makeButtonPayload('clear_confirm'), user.phone);
 
     expect(result.isOk()).toBe(true);
     expect(listingsService.clearUserListings).toHaveBeenCalledWith(user.id, 'sticker');
     expect(usersDb.transitionState).toHaveBeenCalledWith(user.id, ConversationStep.IDLE);
     expect(zapi.sendText).toHaveBeenCalledWith(user.phone, expect.stringContaining('removidas'));
     expect(idle.showMainMenu).toHaveBeenCalledWith(user.id, user.phone);
-    expect(listingsService.bumpListingsExpiry).not.toHaveBeenCalled();
   });
 
-  it('handles text "3" (trial account fallback)', async () => {
-    const user = makeUser();
-    vi.mocked(listingsService.clearUserListings).mockResolvedValue(ok(undefined));
+  it('keeps listings when user cancels with clear_cancel button', async () => {
+    const user = makeUser({ pending_clear: true });
     vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
     vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
 
-    const result = await handleConfirmingInventory(user, makeTextPayload('3'), user.phone);
+    const result = await handleConfirmingInventory(user, makeButtonPayload('clear_cancel'), user.phone);
 
     expect(result.isOk()).toBe(true);
-    expect(listingsService.clearUserListings).toHaveBeenCalled();
+    expect(listingsService.clearUserListings).not.toHaveBeenCalled();
+    expect(zapi.sendText).toHaveBeenCalledWith(user.phone, expect.stringContaining('mantidas'));
+    expect(idle.showMainMenu).toHaveBeenCalledWith(user.id, user.phone);
   });
 
-  it('propagates error when clearUserListings fails', async () => {
-    const user = makeUser();
+  it('propagates error when clearUserListings fails during confirmation', async () => {
+    const user = makeUser({ pending_clear: true });
     vi.mocked(listingsService.clearUserListings).mockResolvedValue(err(new Error('db error')));
 
-    const result = await handleConfirmingInventory(user, makeButtonPayload('inv_clear'), user.phone);
+    const result = await handleConfirmingInventory(user, makeButtonPayload('clear_confirm'), user.phone);
 
     expect(result.isErr()).toBe(true);
     expect(usersDb.transitionState).not.toHaveBeenCalled();
@@ -190,7 +238,7 @@ describe('handleConfirmingInventory — unknown input', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       user.phone,
-      expect.stringContaining('disponiveis'),
+      expect.stringContaining('disponíveis'),
       expect.arrayContaining([
         expect.objectContaining({ id: 'inv_keep' }),
         expect.objectContaining({ id: 'inv_update' }),
@@ -223,7 +271,7 @@ describe('sendExpiryNudge', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('disponiveis'),
+      expect.stringContaining('disponíveis'),
       expect.arrayContaining([
         expect.objectContaining({ id: 'inv_keep' }),
         expect.objectContaining({ id: 'inv_update' }),

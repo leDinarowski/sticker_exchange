@@ -66,7 +66,7 @@ describe('handleOnboardingTerms', () => {
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_LOCATION);
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('localizacao')
+      expect.stringContaining('localização')
     );
   });
 

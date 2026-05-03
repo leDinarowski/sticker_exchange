@@ -5,10 +5,9 @@ import { getWantedListings, findBilateralMatches } from '../db/bilateral.js';
 import { formatBilateralList } from '../utils/format-discovery.js';
 import { ConversationStep, User } from '../types/index.js';
 import { sendText } from '../services/zapi.js';
-import { showMainMenu } from './idle.js';
 
 const WANTS_PROMPT =
-  'Quais figurinhas voce busca? Envie os codigos. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
+  'Quais figurinhas você busca? Envie os códigos. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
 
 export async function handleBilateral(
   user: User,
@@ -43,16 +42,16 @@ export async function runBilateralQuery(
   if (entries.length === 0) {
     logger.info({ userId: user.id, event: 'bilateral_empty' });
 
-    const transitionResult = await transitionState(user.id, ConversationStep.IDLE);
+    const transitionResult = await transitionState(user.id, ConversationStep.AWAITING_DISCOVERY, {
+      watch_mode: 'bilateral',
+      watch_attempts: 0,
+    });
     if (transitionResult.isErr()) return transitionResult;
 
-    const sendResult = await sendText(
+    return sendText(
       phone,
-      'Nenhum match perfeito encontrado. Tente expandir seu raio de busca ou atualizar suas figurinhas.'
+      'Nenhum match perfeito encontrado agora.\nVou verificar de hora em hora pelas próximas 6 horas e te aviso assim que encontrar alguém.\nResponda "cancelar" para parar.'
     );
-    if (sendResult.isErr()) return sendResult;
-
-    return showMainMenu(user.id, phone);
   }
 
   const transitionResult = await transitionState(user.id, ConversationStep.BROWSING, {

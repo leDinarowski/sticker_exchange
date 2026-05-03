@@ -20,8 +20,8 @@ export async function handleOnboardingName(
 
     const message =
       nextRetry >= MAX_RETRIES
-        ? 'Envie apenas seu primeiro nome, ex: Maria.'
-        : 'Por favor, envie seu nome (entre 2 e 50 caracteres).';
+        ? 'Por favor, envie seu nome (entre 2 e 50 caracteres).'
+        : 'Envie apenas seu primeiro nome, ex: Maria.';
 
     const transitionResult = await transitionState(
       user.id,
@@ -47,7 +47,7 @@ export async function handleOnboardingName(
 
   return sendButtons(
     user.phone,
-    'Seus dados serao usados para encontrar pessoas proximas para troca. Aceita?',
+    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
     [
       { id: 'terms_accept', label: 'Aceito' },
       { id: 'terms_refuse', label: 'Recuso' },

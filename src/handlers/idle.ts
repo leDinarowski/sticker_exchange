@@ -8,11 +8,11 @@ export async function showMainMenu(
 ): Promise<Result<void, Error>> {
   logger.info({ userId, event: 'show_main_menu' });
 
-  return sendList(phone, 'O que voce quer fazer?', 'Ver opcoes', [
+  return sendList(phone, 'O que você quer fazer?', 'Ver opções', [
     {
       title: 'Buscar',
       rows: [
-        { id: 'discovery', title: 'Olhar em Volta', description: 'Ver quem esta perto' },
+        { id: 'discovery', title: 'Olhar em Volta', description: 'Ver quem está perto' },
         { id: 'bilateral', title: 'Match Perfeito', description: 'Troca exata' },
       ],
     },
@@ -20,7 +20,7 @@ export async function showMainMenu(
       title: 'Gerenciar',
       rows: [
         { id: 'update_listings', title: 'Atualizar Figurinhas' },
-        { id: 'update_location', title: 'Atualizar Localizacao' },
+        { id: 'update_location', title: 'Atualizar Localização' },
       ],
     },
   ]);

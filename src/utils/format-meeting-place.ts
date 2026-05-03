@@ -14,10 +14,10 @@ export function formatMeetingPlaceMessage(place: MeetingPlace): string {
     : place.address;
 
   return [
-    'Sugestao de ponto de encontro para a troca:',
+    'Sugestão de ponto de encontro para a troca:',
     '',
     place.name,
     locationLine,
-    `A ${formatDistance(place.distance_m)} de distancia.`,
+    `A ${formatDistance(place.distance_m)} de distância.`,
   ].join('\n');
 }

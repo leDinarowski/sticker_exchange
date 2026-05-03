@@ -32,7 +32,7 @@ export async function handleOnboardingRadius(
   if (radiusKm === undefined) {
     return sendButtons(
       user.phone,
-      'Qual e o seu raio de busca?',
+      'Qual é o seu raio de busca?',
       [
         { id: 'r1', label: '1 km' },
         { id: 'r3', label: '3 km' },
@@ -52,7 +52,7 @@ export async function handleOnboardingRadius(
 
     logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.IDLE, context: 'update' });
 
-    const sendResult = await sendText(user.phone, 'Localizacao e raio atualizados.');
+    const sendResult = await sendText(user.phone, 'Localização e raio atualizados.');
     if (sendResult.isErr()) return sendResult;
 
     return showMainMenu(user.id, user.phone);
@@ -65,6 +65,6 @@ export async function handleOnboardingRadius(
 
   return sendText(
     user.phone,
-    'Envie os codigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.'
+    'Envie os códigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.'
   );
 }

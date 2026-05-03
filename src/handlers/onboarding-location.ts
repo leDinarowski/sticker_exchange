@@ -13,7 +13,7 @@ export async function handleOnboardingLocation(
   if (!payload.location) {
     return sendText(
       user.phone,
-      'Use o botao de localizacao do WhatsApp para compartilhar sua localizacao.'
+      'Use o botão de localização do WhatsApp para compartilhar sua localização.'
     );
   }
 
@@ -34,7 +34,7 @@ export async function handleOnboardingLocation(
 
   return sendButtons(
     user.phone,
-    'Qual e o seu raio de busca?',
+    'Qual é o seu raio de busca?',
     [
       { id: 'r1', label: '1 km' },
       { id: 'r3', label: '3 km' },

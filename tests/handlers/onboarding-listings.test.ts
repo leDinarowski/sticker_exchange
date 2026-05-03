@@ -306,7 +306,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('figurinhas voce busca')
+      expect.stringContaining('figurinhas você busca')
     );
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
   });
@@ -321,7 +321,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('voce busca'),
+      expect.stringContaining('você busca'),
       expect.arrayContaining([expect.objectContaining({ id: 'confirm_listings' })])
     );
     expect(db.transitionState).toHaveBeenCalledWith(
@@ -364,7 +364,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     );
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('figurinhas voce busca')
+      expect.stringContaining('figurinhas você busca')
     );
   });
 });

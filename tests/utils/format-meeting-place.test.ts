@@ -16,7 +16,7 @@ function makePlace(overrides: Partial<MeetingPlace> = {}): MeetingPlace {
 describe('formatMeetingPlaceMessage', () => {
   it('starts with the header line', () => {
     const msg = formatMeetingPlaceMessage(makePlace());
-    expect(msg.split('\n')[0]).toBe('Sugestao de ponto de encontro para a troca:');
+    expect(msg.split('\n')[0]).toBe('Sugestão de ponto de encontro para a troca:');
   });
 
   it('includes an empty line after the header', () => {
@@ -44,27 +44,27 @@ describe('formatMeetingPlaceMessage', () => {
 
   it('formats distance < 1000 m as whole metres', () => {
     const msg = formatMeetingPlaceMessage(makePlace({ distance_m: 320.7 }));
-    expect(msg).toContain('A 321 m de distancia.');
+    expect(msg).toContain('A 321 m de distância.');
   });
 
   it('formats distance >= 1000 m as km with BR decimal comma', () => {
     const msg = formatMeetingPlaceMessage(makePlace({ distance_m: 1400 }));
-    expect(msg).toContain('A 1,4 km de distancia.');
+    expect(msg).toContain('A 1,4 km de distância.');
   });
 
   it('formats exactly 1000 m as 1,0 km', () => {
     const msg = formatMeetingPlaceMessage(makePlace({ distance_m: 1000 }));
-    expect(msg).toContain('A 1,0 km de distancia.');
+    expect(msg).toContain('A 1,0 km de distância.');
   });
 
   it('full message matches expected format', () => {
     const place = makePlace({ distance_m: 320, name: 'Cafe do Joao', address: 'Rua Augusta, 123', neighborhood: 'Pinheiros' });
     const expected = [
-      'Sugestao de ponto de encontro para a troca:',
+      'Sugestão de ponto de encontro para a troca:',
       '',
       'Cafe do Joao',
       'Rua Augusta, 123 — Pinheiros',
-      'A 320 m de distancia.',
+      'A 320 m de distância.',
     ].join('\n');
     expect(formatMeetingPlaceMessage(place)).toBe(expected);
   });

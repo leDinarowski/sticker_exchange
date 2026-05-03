@@ -57,7 +57,7 @@ describe('formatDiscoveryList', () => {
 
   it('includes selection prompt', () => {
     const entries = [makeEntry(1, 'Joao', ['BRA5'], 500)];
-    expect(formatDiscoveryList(entries)).toContain('Responda com o numero');
+    expect(formatDiscoveryList(entries)).toContain('Responda com o número');
   });
 });
 
@@ -136,7 +136,7 @@ describe('formatBilateralList', () => {
 
   it('includes selection prompt', () => {
     const entries = [makeEntry(1, 'Ana', ['ARG3'], 800)];
-    expect(formatBilateralList(entries)).toContain('Responda com o numero');
+    expect(formatBilateralList(entries)).toContain('Responda com o número');
   });
 });
 

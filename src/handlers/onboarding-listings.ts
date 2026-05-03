@@ -11,10 +11,10 @@ import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
 
 const RE_PROMPT =
-  'Envie os codigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
+  'Envie os códigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
 
 const WANTS_PROMPT =
-  'Quais figurinhas voce busca? Envie os codigos. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
+  'Quais figurinhas você busca? Envie os códigos. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
 
 export async function handleOnboardingListings(
   user: User,
@@ -87,13 +87,13 @@ export async function handleOnboardingListings(
 
   let echoText: string;
   if (collectingWants) {
-    echoText = `Entendi que voce busca: ${formatted}. Esta correto?`;
+    echoText = `Entendi que você busca: ${formatted}. Está correto?`;
   } else if (op === 'add') {
-    echoText = `Adicionar estas figurinhas: ${formatted}. Esta correto?`;
+    echoText = `Adicionar estas figurinhas: ${formatted}. Está correto?`;
   } else if (op === 'remove') {
-    echoText = `Remover estas figurinhas: ${formatted}. Esta correto?`;
+    echoText = `Remover estas figurinhas: ${formatted}. Está correto?`;
   } else {
-    echoText = `Entendi estas figurinhas: ${formatted}. Esta correto?`;
+    echoText = `Entendi estas figurinhas: ${formatted}. Está correto?`;
   }
 
   const sendResult = await sendButtons(
