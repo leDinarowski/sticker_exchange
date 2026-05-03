@@ -81,10 +81,10 @@ describe('handleDiscovery', () => {
     );
   });
 
-  it('transitions to ONBOARDING_RADIUS with updating_location when no users found', async () => {
+  it('enrolls user in AWAITING_DISCOVERY watch when no users found', async () => {
     vi.mocked(discoveryDb.findNearbyUsers).mockResolvedValue(ok([]));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
     const user = makeUser(ConversationStep.IDLE);
     const result = await handleDiscovery(user, '5511999999999');
@@ -92,13 +92,12 @@ describe('handleDiscovery', () => {
     expect(result.isOk()).toBe(true);
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-me',
-      ConversationStep.ONBOARDING_RADIUS,
-      { updating_location: true }
+      ConversationStep.AWAITING_DISCOVERY,
+      { watch_mode: 'discovery', watch_attempts: 0 }
     );
-    expect(zapi.sendButtons).toHaveBeenCalledWith(
+    expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('Nenhuma'),
-      expect.arrayContaining([expect.objectContaining({ id: 'r1' })])
+      expect.stringContaining('6 horas')
     );
   });
 
@@ -155,7 +154,7 @@ describe('handleBrowsing — list selection (no selected_indices)', () => {
     expect(db.transitionState).not.toHaveBeenCalled();
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('Pessoas perto de voce')
+      expect.stringContaining('Pessoas perto de você')
     );
   });
 
@@ -191,7 +190,7 @@ describe('handleBrowsing — action selection (with selected_indices)', () => {
     );
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('Pessoas perto de voce')
+      expect.stringContaining('Pessoas perto de você')
     );
   });
 

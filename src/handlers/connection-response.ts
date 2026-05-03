@@ -27,7 +27,12 @@ export async function handleAwaitingMatchResponse(
   const ctx = user.conversation_state?.context ?? {};
 
   if (ctx.pending_match_id) {
-    return handleMatchRespondent(user, payload, phone, ctx.pending_match_id, ctx.pending_target_name ?? 'Alguem');
+    return handleMatchRespondent(user, payload, phone, ctx.pending_match_id, ctx.pending_target_name ?? 'Alguém');
+  }
+
+  const text = payload.text?.message?.trim().toLowerCase() ?? '';
+  if (text === 'cancelar') {
+    return handleMatchInitiatorCancel(user, phone);
   }
 
   return handleMatchInitiator(user, phone);
@@ -47,10 +52,10 @@ async function handleMatchRespondent(
   if (action === 'unknown') {
     return sendButtons(
       phone,
-      `${initiatorName} quer trocar figurinhas com voce. Aceita?`,
+      `${initiatorName} quer trocar figurinhas com você. Aceita?`,
       [
         { id: `match_accept_${matchId}`, label: 'Sim' },
-        { id: `match_decline_${matchId}`, label: 'Nao' },
+        { id: `match_decline_${matchId}`, label: 'Não' },
       ]
     );
   }
@@ -119,11 +124,11 @@ async function processAccept(
     return showMainMenu(userB.id, phoneB);
   }
 
-  const groupResult = await createGroup('Troca de Figurinhas', [userA.phone, userB.phone]);
+  const groupResult = await createGroup(`Troca: ${userA.name ?? 'A'} e ${userB.name ?? 'B'}`, [userA.phone, userB.phone]);
   if (groupResult.isErr()) return err(groupResult.error);
   const groupPhone = groupResult.value;
 
-  const welcome = await sendText(groupPhone, 'Combinado! Este grupo foi criado para voces organizarem a troca.');
+  const welcome = await sendText(groupPhone, 'Combinado! Combinem horário e local aqui no grupo. Boa troca!');
   if (welcome.isErr()) return welcome;
 
   // Meeting place suggestion — non-fatal: failure never blocks the connection flow.
@@ -141,16 +146,14 @@ async function processAccept(
   if (upd2.isErr()) return upd2;
 
   // Notify and return User A to IDLE
-  const notifyA = await sendText(userA.phone, `${userB.name ?? 'Alguem'} aceitou. O grupo foi criado no WhatsApp.`);
+  const notifyA = await sendText(userA.phone, `${userB.name ?? 'Alguém'} aceitou. O grupo foi criado no WhatsApp.`);
   if (notifyA.isErr()) return notifyA;
   const tA = await transitionState(userA.id, ConversationStep.IDLE);
   if (tA.isErr()) return tA;
   const menuA = await showMainMenu(userA.id, userA.phone);
   if (menuA.isErr()) return menuA;
 
-  // Return User B to IDLE
-  const notifyB = await sendText(phoneB, 'Combinado! O grupo foi criado no WhatsApp.');
-  if (notifyB.isErr()) return notifyB;
+  // Return User B to IDLE (group welcome already confirmed the match; no redundant private message)
   const tB = await transitionState(userB.id, ConversationStep.IDLE);
   if (tB.isErr()) return tB;
   return showMainMenu(userB.id, phoneB);
@@ -175,7 +178,7 @@ async function processDecline(
   if (userA) {
     const notifyA = await sendText(
       userA.phone,
-      `${userB.name ?? 'Alguem'} nao aceitou a troca desta vez.`
+      `${userB.name ?? 'Alguém'} não aceitou a troca desta vez.`
     );
     if (notifyA.isErr()) return notifyA;
     const tA = await transitionState(userA.id, ConversationStep.IDLE);
@@ -184,12 +187,35 @@ async function processDecline(
     if (menuA.isErr()) return menuA;
   }
 
+  const closureB = await sendText(phoneB, 'Tudo bem. Se quiser encontrar outras pessoas, use o menu.');
+  if (closureB.isErr()) return closureB;
   const tB = await transitionState(userB.id, ConversationStep.IDLE);
   if (tB.isErr()) return tB;
   return showMainMenu(userB.id, phoneB);
 }
 
 // ─── User A: waiting for respondent ─────────────────────────────────────────
+
+async function handleMatchInitiatorCancel(
+  user: User,
+  phone: string
+): Promise<Result<void, Error>> {
+  logger.info({ userId: user.id, event: 'match_initiator_cancelled' });
+
+  const pendingResult = await getPendingMatchesForUserA(user.id);
+  if (pendingResult.isErr()) return err(pendingResult.error);
+
+  for (const m of pendingResult.value) {
+    const upd = await updateMatchStatus(m.id, MatchStatus.EXPIRED);
+    if (upd.isErr()) return upd;
+  }
+
+  const t = await transitionState(user.id, ConversationStep.IDLE);
+  if (t.isErr()) return t;
+  const send = await sendText(phone, 'Pedido cancelado. Use o menu para tentar novamente.');
+  if (send.isErr()) return send;
+  return showMainMenu(user.id, phone);
+}
 
 async function handleMatchInitiator(
   user: User,
@@ -217,7 +243,7 @@ async function handleMatchInitiator(
   }
 
   if (active.length > 0) {
-    return sendText(phone, 'Ainda aguardando resposta...');
+    return sendText(phone, 'Ainda aguardando resposta... Responda "cancelar" para desistir.');
   }
 
   // All expired — return to IDLE

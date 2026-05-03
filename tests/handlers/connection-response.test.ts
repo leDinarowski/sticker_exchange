@@ -122,10 +122,10 @@ describe('handleAwaitingMatchResponse — respondent accepts (button)', () => {
 
     expect(result.isOk()).toBe(true);
 
-    expect(zapi.createGroup).toHaveBeenCalledWith('Troca de Figurinhas', [
-      userA.phone,
-      userB.phone,
-    ]);
+    expect(zapi.createGroup).toHaveBeenCalledWith(
+      expect.stringContaining('Troca'),
+      [userA.phone, userB.phone]
+    );
     expect(zapi.sendText).toHaveBeenCalledWith('groupid@g.us', expect.stringContaining('Combinado'));
     expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONFIRMED_B);
     expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
@@ -191,7 +191,7 @@ describe('handleAwaitingMatchResponse — respondent declines (button)', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.createGroup).not.toHaveBeenCalled();
     expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.DECLINED);
-    expect(zapi.sendText).toHaveBeenCalledWith(userA.phone, expect.stringContaining('nao aceitou'));
+    expect(zapi.sendText).toHaveBeenCalledWith(userA.phone, expect.stringContaining('não aceitou'));
     expect(usersDb.transitionState).toHaveBeenCalledWith(userA.id, ConversationStep.IDLE);
     expect(usersDb.transitionState).toHaveBeenCalledWith(userB.id, ConversationStep.IDLE);
   });

@@ -24,7 +24,7 @@ export async function handleOnboardingTerms(
 
     logger.info({ userId: user.id, event: 'state_transition', to: ConversationStep.ONBOARDING_LOCATION });
 
-    return sendText(user.phone, 'Agora compartilhe sua localizacao pelo WhatsApp.');
+    return sendText(user.phone, 'Agora compartilhe sua localização pelo WhatsApp.');
   }
 
   if (isRefuse) {
@@ -35,13 +35,13 @@ export async function handleOnboardingTerms(
 
     return sendText(
       user.phone,
-      'Entendido. Nenhum dado sera armazenado. Se mudar de ideia, envie qualquer mensagem.'
+      'Entendido. Nenhum dado será armazenado. Se mudar de ideia, envie qualquer mensagem.'
     );
   }
 
   return sendButtons(
     user.phone,
-    'Seus dados serao usados para encontrar pessoas proximas para troca. Aceita?',
+    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
     [
       { id: 'terms_accept', label: 'Aceito' },
       { id: 'terms_refuse', label: 'Recuso' },

@@ -60,7 +60,7 @@ describe('handleBilateral', () => {
     );
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('figurinhas voce busca')
+      expect.stringContaining('figurinhas você busca')
     );
     expect(bilateralDb.findBilateralMatches).not.toHaveBeenCalled();
   });
@@ -115,21 +115,24 @@ describe('runBilateralQuery', () => {
     );
   });
 
-  it('sends no-match message and shows main menu when no bilateral matches found', async () => {
+  it('enrolls user in AWAITING_DISCOVERY watch when no bilateral matches found', async () => {
     vi.mocked(bilateralDb.findBilateralMatches).mockResolvedValue(ok([]));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
 
     const result = await runBilateralQuery(makeUser(), '5511999999999');
 
     expect(result.isOk()).toBe(true);
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-me', ConversationStep.IDLE);
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-me',
+      ConversationStep.AWAITING_DISCOVERY,
+      { watch_mode: 'bilateral', watch_attempts: 0 }
+    );
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('Nenhum match perfeito')
+      expect.stringContaining('6 horas')
     );
-    expect(idleHandler.showMainMenu).toHaveBeenCalledWith('uuid-me', '5511999999999');
+    expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
   });
 
   it('propagates DB error from findBilateralMatches', async () => {

@@ -50,6 +50,9 @@ vi.mock('../../src/handlers/update-listings.js', () => ({
 vi.mock('../../src/handlers/confirming-inventory.js', () => ({
   handleConfirmingInventory: vi.fn(),
 }));
+vi.mock('../../src/handlers/awaiting-discovery.js', () => ({
+  handleAwaitingDiscovery: vi.fn(),
+}));
 
 import { route } from '../../src/webhook/router.js';
 import * as newHandler from '../../src/handlers/new.js';

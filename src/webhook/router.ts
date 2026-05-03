@@ -16,6 +16,7 @@ import { handleBilateral } from '../handlers/bilateral.js';
 import { handleAwaitingMatchResponse } from '../handlers/connection-response.js';
 import { handleUpdateListings } from '../handlers/update-listings.js';
 import { handleConfirmingInventory } from '../handlers/confirming-inventory.js';
+import { handleAwaitingDiscovery } from '../handlers/awaiting-discovery.js';
 
 const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '1': 'discovery',
@@ -113,6 +114,9 @@ export async function route(
 
     case ConversationStep.CONFIRMING_INVENTORY:
       return withTiming(user.id, step, () => handleConfirmingInventory(user, payload, phone));
+
+    case ConversationStep.AWAITING_DISCOVERY:
+      return withTiming(user.id, step, () => handleAwaitingDiscovery(user, payload, phone));
 
     case ConversationStep.NEW:
     default:

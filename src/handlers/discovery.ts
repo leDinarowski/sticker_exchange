@@ -31,16 +31,16 @@ export async function handleDiscovery(
   if (entries.length === 0) {
     logger.info({ userId: user.id, event: 'discovery_empty' });
 
-    const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_RADIUS, {
-      updating_location: true,
+    const transitionResult = await transitionState(user.id, ConversationStep.AWAITING_DISCOVERY, {
+      watch_mode: 'discovery',
+      watch_attempts: 0,
     });
     if (transitionResult.isErr()) return transitionResult;
 
-    return sendButtons(phone, 'Nenhuma pessoa com figurinhas encontrada perto de voce. Escolha um novo raio para tentar novamente:', [
-      { id: 'r1', label: '1 km' },
-      { id: 'r3', label: '3 km' },
-      { id: 'r5', label: '5 km' },
-    ]);
+    return sendText(
+      phone,
+      'Nenhuma pessoa com figurinhas encontrada perto de você agora.\nVou verificar de hora em hora pelas próximas 6 horas e te aviso assim que encontrar alguém.\nResponda "cancelar" para parar.'
+    );
   }
 
   const transitionResult = await transitionState(user.id, ConversationStep.BROWSING, {
@@ -155,16 +155,16 @@ async function handleActionSelection(
 
     const tB = await transitionState(userB.id, ConversationStep.AWAITING_MATCH_RESPONSE, {
       pending_match_id: match.id,
-      pending_target_name: user.name ?? 'Alguem',
+      pending_target_name: user.name ?? 'Alguém',
     });
     if (tB.isErr()) return tB;
 
     const notifyB = await sendButtons(
       userB.phone,
-      `${user.name ?? 'Alguem'} quer trocar figurinhas com voce. Aceita?`,
+      `${user.name ?? 'Alguém'} quer trocar figurinhas com você. Aceita?`,
       [
         { id: `match_accept_${match.id}`, label: 'Sim' },
-        { id: `match_decline_${match.id}`, label: 'Nao' },
+        { id: `match_decline_${match.id}`, label: 'Não' },
       ]
     );
     if (notifyB.isErr()) return notifyB;
@@ -177,5 +177,5 @@ async function handleActionSelection(
 
   const names = contactTargets.map(t => t.name).join(', ');
   logger.info({ userId: user.id, event: 'connection_initiated', matchCount: matchIds.length });
-  return sendText(phone, `Pedido enviado para ${names}. Voce sera avisado quando responderem.`);
+  return sendText(phone, `Pedido enviado para ${names}. Você será avisado quando responderem.`);
 }

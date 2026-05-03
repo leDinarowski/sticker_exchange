@@ -6,7 +6,7 @@ import { sendText } from '../services/zapi.js';
 import { ConversationStep, User } from '../types/index.js';
 
 const UPDATE_PROMPT =
-  'Envie os codigos para substituir sua lista, ou use "adicionar" / "remover" para ajustes. Ex: BRA5, ARG3 ou adicionar FWC8.';
+  'Envie os códigos para substituir sua lista, ou use "adicionar" / "remover" para ajustes. Ex: BRA5, ARG3 ou adicionar FWC8.';
 
 export async function handleUpdateListings(
   user: User,
@@ -17,8 +17,8 @@ export async function handleUpdateListings(
 
   const count = countResult.value;
   const intro = count > 0
-    ? `Voce tem ${count} figurinha${count === 1 ? '' : 's'} cadastrada${count === 1 ? '' : 's'}. `
-    : 'Voce nao tem figurinhas cadastradas ainda. ';
+    ? `Você tem ${count} figurinha${count === 1 ? '' : 's'} cadastrada${count === 1 ? '' : 's'}. `
+    : 'Você não tem figurinhas cadastradas ainda. ';
 
   const sendResult = await sendText(phone, intro + UPDATE_PROMPT);
   if (sendResult.isErr()) return sendResult;

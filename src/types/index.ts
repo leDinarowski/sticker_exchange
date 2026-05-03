@@ -11,6 +11,7 @@ export const ConversationStep = {
   BROWSING:                'BROWSING',
   CONFIRMING_INVENTORY:    'CONFIRMING_INVENTORY',
   AWAITING_MATCH_RESPONSE: 'AWAITING_MATCH_RESPONSE',
+  AWAITING_DISCOVERY:      'AWAITING_DISCOVERY',
 } as const;
 
 export type ConversationStep = typeof ConversationStep[keyof typeof ConversationStep];
@@ -35,6 +36,9 @@ export interface ConversationStateContext {
   retry_count?: number;
   updating_location?: boolean;
   collecting_wants?: boolean;
+  pending_clear?: boolean;
+  watch_mode?: 'discovery' | 'bilateral';
+  watch_attempts?: number;
 }
 
 export interface ConversationStatePayload {

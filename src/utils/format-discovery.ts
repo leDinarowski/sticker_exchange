@@ -13,9 +13,9 @@ export function formatDiscoveryList(entries: DiscoveryEntry[]): string {
   });
 
   return [
-    'Pessoas perto de voce:\n',
+    'Pessoas perto de você:\n',
     ...lines,
-    '\nResponda com o numero. Voce pode selecionar varios: ex. 1,3 ou 1-3',
+    '\nResponda com o número. Você pode selecionar vários: ex. 1,3 ou 1-3',
   ].join('\n');
 }
 
@@ -34,7 +34,7 @@ export function formatProfiles(entries: DiscoveryEntry[]): string {
 
   const footer =
     entries.length > 1
-      ? `\nVoce pode selecionar pessoas especificas: ex. 1,2`
+      ? `\nVocê pode selecionar pessoas específicas: ex. 1,2`
       : '';
 
   return [
@@ -54,9 +54,9 @@ export function formatBilateralList(entries: DiscoveryEntry[]): string {
   });
 
   return [
-    'Matches perfeitos perto de voce:\n',
+    'Matches perfeitos perto de você:\n',
     ...lines,
-    '\nResponda com o numero. Voce pode selecionar varios: ex. 1,3 ou 1-3',
+    '\nResponda com o número. Você pode selecionar vários: ex. 1,3 ou 1-3',
   ].join('\n');
 }
 

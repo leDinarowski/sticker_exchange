@@ -91,7 +91,19 @@ describe('handleOnboardingName', () => {
     );
   });
 
-  it('sends gentler copy and resets counter after 3 retries', async () => {
+  it('sends human hint ("primeiro nome") on first retry', async () => {
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    await handleOnboardingName(makeUser(0), makePayload('X'));
+
+    expect(zapi.sendText).toHaveBeenCalledWith(
+      '5511999999999',
+      expect.stringContaining('primeiro nome')
+    );
+  });
+
+  it('sends technical constraint message and resets counter after 3 retries', async () => {
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
@@ -99,7 +111,7 @@ describe('handleOnboardingName', () => {
 
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('primeiro nome')
+      expect.stringContaining('caracteres')
     );
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',

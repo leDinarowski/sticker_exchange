@@ -64,7 +64,7 @@ describe('handleUpdateListings', () => {
     expect(result.isOk()).toBe(true);
     expect(zapi.sendText).toHaveBeenCalledWith(
       user.phone,
-      expect.stringContaining('nao tem figurinhas')
+      expect.stringContaining('não tem figurinhas')
     );
     expect(usersDb.transitionState).toHaveBeenCalledWith(
       user.id,
