@@ -14,6 +14,8 @@
 -- To reactivate:
 --   UPDATE meeting_places SET active = true WHERE id = '<uuid>';
 
+SET search_path TO public, extensions;
+
 CREATE TABLE meeting_places (
   id           UUID        PRIMARY KEY DEFAULT gen_random_uuid(),
   name         TEXT        NOT NULL,
