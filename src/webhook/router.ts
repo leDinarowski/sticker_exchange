@@ -24,6 +24,23 @@ const IDLE_TEXT_TO_ROW_ID: Record<string, string> = {
   '4': 'update_location',
 };
 
+async function withTiming(
+  userId: string,
+  step: string,
+  fn: () => Promise<Result<void, Error>>
+): Promise<Result<void, Error>> {
+  const start = Date.now();
+  const result = await fn();
+  logger.info({
+    userId,
+    step,
+    event: 'handler_complete',
+    durationMs: Date.now() - start,
+    outcome: result.isOk() ? 'ok' : 'error',
+  });
+  return result;
+}
+
 export async function route(
   user: User | null,
   identifier: UserIdentifier,
@@ -34,7 +51,9 @@ export async function route(
   const phone = identifier.phone ?? identifier.waUsername ?? '';
 
   if (!user) {
-    return handleNew(identifier);
+    return withTiming(identifier.phone ?? 'unknown', ConversationStep.NEW, () =>
+      handleNew(identifier)
+    );
   }
 
   if (user.refused_at && !user.consented_at) {
@@ -43,7 +62,7 @@ export async function route(
     const reOnboardId: UserIdentifier = {};
     if (user.phone) reOnboardId.phone = user.phone;
     if (user.wa_username) reOnboardId.waUsername = user.wa_username;
-    return handleNew(reOnboardId);
+    return withTiming(user.id, ConversationStep.NEW, () => handleNew(reOnboardId));
   }
 
   const step = user.conversation_state?.step ?? ConversationStep.NEW;
@@ -52,24 +71,26 @@ export async function route(
   // Match-button intercept: handle regardless of user's current state (paid account real buttons)
   const anyButtonId = payload.buttonsResponseMessage?.selectedButtonId;
   if (anyButtonId?.startsWith('match_accept_') || anyButtonId?.startsWith('match_decline_')) {
-    return handleAwaitingMatchResponse(user, payload, phone);
+    return withTiming(user.id, step, () =>
+      handleAwaitingMatchResponse(user, payload, phone)
+    );
   }
 
   switch (step) {
     case ConversationStep.ONBOARDING_NAME:
-      return handleOnboardingName(user, payload);
+      return withTiming(user.id, step, () => handleOnboardingName(user, payload));
 
     case ConversationStep.ONBOARDING_TERMS:
-      return handleOnboardingTerms(user, payload);
+      return withTiming(user.id, step, () => handleOnboardingTerms(user, payload));
 
     case ConversationStep.ONBOARDING_LOCATION:
-      return handleOnboardingLocation(user, payload);
+      return withTiming(user.id, step, () => handleOnboardingLocation(user, payload));
 
     case ConversationStep.ONBOARDING_RADIUS:
-      return handleOnboardingRadius(user, payload);
+      return withTiming(user.id, step, () => handleOnboardingRadius(user, payload));
 
     case ConversationStep.ONBOARDING_LISTINGS:
-      return handleOnboardingListings(user, payload);
+      return withTiming(user.id, step, () => handleOnboardingListings(user, payload));
 
     case ConversationStep.IDLE: {
       const rowId =
@@ -77,25 +98,25 @@ export async function route(
         payload.buttonsResponseMessage?.selectedButtonId ??
         IDLE_TEXT_TO_ROW_ID[payload.text?.message?.trim() ?? ''];
 
-      if (rowId === 'update_location') return handleUpdateLocation(user, phone);
-      if (rowId === 'discovery') return handleDiscovery(user, phone);
-      if (rowId === 'bilateral') return handleBilateral(user, phone);
-      if (rowId === 'update_listings') return handleUpdateListings(user, phone);
-      return showMainMenu(user.id, phone);
+      if (rowId === 'update_location') return withTiming(user.id, step, () => handleUpdateLocation(user, phone));
+      if (rowId === 'discovery') return withTiming(user.id, step, () => handleDiscovery(user, phone));
+      if (rowId === 'bilateral') return withTiming(user.id, step, () => handleBilateral(user, phone));
+      if (rowId === 'update_listings') return withTiming(user.id, step, () => handleUpdateListings(user, phone));
+      return withTiming(user.id, step, () => showMainMenu(user.id, phone));
     }
 
     case ConversationStep.BROWSING:
-      return handleBrowsing(user, payload, phone);
+      return withTiming(user.id, step, () => handleBrowsing(user, payload, phone));
 
     case ConversationStep.AWAITING_MATCH_RESPONSE:
-      return handleAwaitingMatchResponse(user, payload, phone);
+      return withTiming(user.id, step, () => handleAwaitingMatchResponse(user, payload, phone));
 
     case ConversationStep.CONFIRMING_INVENTORY:
-      return handleConfirmingInventory(user, payload, phone);
+      return withTiming(user.id, step, () => handleConfirmingInventory(user, payload, phone));
 
     case ConversationStep.NEW:
     default:
       logger.warn({ userId: user.id, step, event: 'unknown_state_fallback' });
-      return showMainMenu(user.id, phone);
+      return withTiming(user.id, step, () => showMainMenu(user.id, phone));
   }
 }

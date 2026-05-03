@@ -104,8 +104,6 @@ export async function createGroup(
     phones: participants,
   });
   if (result.isErr()) return err(result.error);
-  // Log full response so we can confirm the group phone field name
-  logger.info({ event: 'zapi_create_group_response', body: result.value });
   const groupPhone = (result.value['phone'] ?? result.value['groupPhone'] ?? result.value['id']) as string | undefined;
   if (!groupPhone) {
     return err(new Error(`create-group returned no phone field: ${JSON.stringify(result.value)}`));
@@ -125,4 +123,20 @@ export async function sendList(
   const rows = sections.flatMap((s) => s.rows);
   const options = rows.map((r, i) => `${i + 1} - ${r.title}`).join('\n');
   return sendText(phone, `${message}\n\n${options}\n\nResponda com o numero.`);
+}
+
+export async function checkZApiConnectivity(): Promise<Result<void, Error>> {
+  try {
+    const url = `${baseUrl()}/connected`;
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { 'Client-Token': CLIENT_TOKEN ?? '' },
+    });
+    if (!res.ok) {
+      return err(new Error(`Z-API /connected returned ${res.status}`));
+    }
+    return ok(undefined);
+  } catch (e) {
+    return err(new Error(e instanceof Error ? e.message : 'Z-API unreachable'));
+  }
 }

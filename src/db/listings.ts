@@ -26,3 +26,9 @@ export async function getUsersNeedingNudge(): Promise<Result<NudgeTarget[], Erro
   if (error) return err(new Error(error.message));
   return ok((data ?? []) as NudgeTarget[]);
 }
+
+export async function getUsersForLocationNudge(): Promise<Result<NudgeTarget[], Error>> {
+  const { data, error } = await supabase.rpc('get_users_for_location_nudge');
+  if (error) return err(new Error(error.message));
+  return ok((data ?? []) as NudgeTarget[]);
+}

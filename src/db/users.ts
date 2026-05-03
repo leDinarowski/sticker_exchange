@@ -143,3 +143,22 @@ export async function updateUserRadius(
   if (error) return err(new Error(error.message));
   return ok(undefined);
 }
+
+export async function checkRateLimit(
+  userId: string
+): Promise<Result<boolean, Error>> {
+  const { data, error } = await supabase.rpc('check_rate_limit', { p_user_id: userId });
+  if (error) return err(new Error(error.message));
+  return ok(data as boolean);
+}
+
+export async function markLocationNudgeSent(
+  userId: string
+): Promise<Result<void, Error>> {
+  const { error } = await supabase
+    .from('users')
+    .update({ location_updated_at: new Date().toISOString() })
+    .eq('id', userId);
+  if (error) return err(new Error(error.message));
+  return ok(undefined);
+}
