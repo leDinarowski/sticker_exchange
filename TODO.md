@@ -182,10 +182,10 @@
 - [ ] Testes: `compactCodes(['BRA1','BRA2','BRA3','BRA4','BRA5'])` → `'BRA1-5'`; prefixos múltiplos; lista de 1 item
 
 **US-10.3 — Ignorar mensagens de grupo no webhook**
-- [ ] Inspecionar payload Z-API para mensagem de grupo (logar ou consultar docs) para confirmar formato do `phone`
-- [ ] Em `api/webhook.ts`, antes de `findUser`: detectar JID de grupo e retornar 200 silencioso
-- [ ] Atualizar `src/webhook/schema.ts` se necessário para aceitar campo identificador de grupo
-- [ ] Testes: payload com phone de grupo → `findUser` não é chamado, retorna 200
+- [DONE — 2026-05-13] Inspecionar payload Z-API para mensagem de grupo (logar ou consultar docs) para confirmar formato do `phone`
+- [DONE — 2026-05-13] Em `api/webhook.ts`, antes de `findUser`: detectar JID de grupo e retornar 200 silencioso
+- [DONE — 2026-05-13] Atualizar `src/webhook/schema.ts` se necessário para aceitar campo identificador de grupo
+- [DONE — 2026-05-13] Testes: payload com phone de grupo → `findUser` não é chamado, retorna 200
 
 **US-10.4 — Diagnóstico e seed de pontos de encontro**
 - [ ] Verificar se `meeting_places` tem dados para a área de teste; criar seed SQL se vazia

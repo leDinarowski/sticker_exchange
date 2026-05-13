@@ -35,6 +35,11 @@ export default async function handler(
 
   const payload = parsed.data;
 
+  if (payload.phone.includes('@g.us')) {
+    res.status(200).json({ ok: true });
+    return;
+  }
+
   const identifier: UserIdentifier = {
     phone: payload.phone,
   };
