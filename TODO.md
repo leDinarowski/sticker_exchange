@@ -163,12 +163,46 @@
 
 ---
 
-## Backlog — Future
+## Phase 10 — Bug Fixes & UX Improvements
 
-- [ ] Bilateral matching refinement: show overlap count ("3 figurinhas em comum")
-- [ ] H3 resolution upgrade: evaluate resolution 9 (~174m) for denser urban areas
-- [ ] Photo OCR: user sends sticker page photo → extract numbers via vision API
-- [ ] Post-trade review: after group created, ask each user to rate the experience (1–5)
-- [ ] Generic domain adapter: separate sticker-specific logic into a domain plugin interface
-- [ ] WhatsApp username lookup: support @username in addition to phone in all lookups
-- [ ] Admin view: Supabase Studio dashboard for monitoring active users and matches
+**Branch:** `fix/post-test-improvements`
+
+**US-10.1 — Upgrade H3 res 8 → 9 ou 10 para precisão geográfica**
+- [DONE — 2026-05-13] Decidir resolução final: res 9 (~174 m) vs res 10 (~65 m) — ver ADR-026 (escolhido res 10)
+- [DONE — 2026-05-13] Criar migration SQL: setar `location = NULL` para todos os usuários ativos (`20260513000000_h3_res10_reset_locations.sql`)
+- [DONE — 2026-05-13] Atualizar constante de resolução em `src/services/location.ts` (H3_RESOLUTION 8 → 10)
+- [DONE — 2026-05-13] Garantir que `ST_DWithin` e `ST_Distance` continuem corretos após o re-snap (funções SQL são agnósticas à resolução)
+- [DONE — 2026-05-13] Atualizar `formatDistance()` em `src/utils/format-discovery.ts` e `src/utils/format-meeting-place.ts` se necessário (sem alterações necessárias — funções são agnósticas)
+- [DONE — 2026-05-13] Testes: H3-snap para dois pontos a 300 m → dist_m > 0; regressão em todos os testes geoespaciais existentes
+
+**US-10.2 — Compactar lista de figurinhas no perfil de discovery**
+- [ ] Extrair função `compactCodes(codes: string[]): string` de `formatListingPreview()` em `src/utils/listing-parser.ts`
+- [ ] Aplicar compactação sempre (remover o guard `codes.length > 10`)
+- [ ] Usar `compactCodes` em `formatProfiles()` em `src/utils/format-discovery.ts:25`
+- [ ] Testes: `compactCodes(['BRA1','BRA2','BRA3','BRA4','BRA5'])` → `'BRA1-5'`; prefixos múltiplos; lista de 1 item
+
+**US-10.3 — Ignorar mensagens de grupo no webhook**
+- [ ] Inspecionar payload Z-API para mensagem de grupo (logar ou consultar docs) para confirmar formato do `phone`
+- [ ] Em `api/webhook.ts`, antes de `findUser`: detectar JID de grupo e retornar 200 silencioso
+- [ ] Atualizar `src/webhook/schema.ts` se necessário para aceitar campo identificador de grupo
+- [ ] Testes: payload com phone de grupo → `findUser` não é chamado, retorna 200
+
+**US-10.4 — Diagnóstico e seed de pontos de encontro**
+- [ ] Verificar se `meeting_places` tem dados para a área de teste; criar seed SQL se vazia
+- [ ] Em `src/handlers/connection-response.ts:138`: adicionar log `meeting_place_not_found` quando `placeResult.value` é null
+- [ ] Distinguir "lugar não encontrado" (log info) de "query com erro" (log warn) nos logs
+- [ ] Testes: mock `findNearestMeetingPlace` retornando null → log `meeting_place_not_found` emitido
+
+**US-10.5 — Echo-back de confirmação para nome no onboarding**
+- [ ] Em `src/handlers/onboarding-name.ts`: ao receber texto válido, armazenar `pending_name` no contexto em vez de salvar diretamente
+- [ ] Enviar echo-back: "Nome: XPTO\n\nConfirma?" com botões [Confirmar] [Alterar]
+- [ ] Ao [Confirmar]: salvar nome, avançar; ao [Alterar]: limpar `pending_name`, re-perguntar
+- [ ] Atualizar schema de contexto JSONB em `.claude/skills/state-machine/SKILL.md`
+- [ ] Testes: nome digitado → echo-back enviado + pending_name salvo; [Confirmar] → nome salvo; [Alterar] → re-prompt
+
+**US-10.6 — Modo de acumulação para figurinhas em mensagens separadas**
+- [ ] Em `src/handlers/onboarding-listings.ts`: ao receber códigos sem confirmação pendente, acrescentar a `context.accumulated_codes` (deduplicar)
+- [ ] Exibir lista corrente acumulada com botões [Continuar adicionando] [Confirmar] [Corrigir]
+- [ ] [Confirmar]: processar `accumulated_codes` como lista final; [Corrigir]: limpar acumulado, re-perguntar
+- [ ] Manter compatibilidade: enviar tudo de uma vez ainda funciona (acumula lista com 1 mensagem e pede confirmação)
+- [ ] Testes: 2 mensagens separadas → accumulated_codes contém ambas; duplicata → deduplica; [Confirmar] → salva combinado

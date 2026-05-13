@@ -625,3 +625,62 @@ Phase 9 introduces a curated table of physical locations (cafes, bookstores) tha
 - **Stale data**: Manually-added places can become outdated (business closed, moved). Mitigation: `active` boolean flag allows deactivation without deletion; no automated sync needed for MVP.
 - **Missing GIST index**: The query uses `ST_DWithin` which requires the GIST index created in the migration. If the index is missing, the query will full-scan `meeting_places`. Since the table is small at MVP, this is not a correctness issue, but should be verified post-migration.
 
+---
+
+## ADR-025: Listing Input — Explicit Accumulation Mode Instead of Timer Debounce
+
+**Status:** Accepted
+**Date:** 2026-05-13
+
+### Context
+Users naturally send sticker codes as separate WhatsApp messages (e.g., "BRA1", then "BRA4", then "BRA7"). Each message triggers an independent webhook invocation. The current handler processes each message as a standalone echo-back cycle, so each message replaces the previous `pending_listings` — only the last message survives.
+
+Options evaluated:
+- **Timer debounce**: Wait N seconds after last message, then process accumulated input. Requires a TTL store (Redis or polling `last_input_at`), which adds infrastructure.
+- **Explicit accumulation**: Append each parsed message to `accumulated_codes` in the JSONB context and display the running list with explicit [Continuar adicionando] / [Confirmar] / [Corrigir] buttons.
+
+### Decision
+Use **explicit accumulation** with buttons. No timer debounce.
+
+### Rationale
+- Serverless functions do not maintain state between invocations — a timer-based approach would require an external TTL store.
+- Explicit accumulation uses the existing JSONB context infrastructure with no new dependencies.
+- Buttons give the user direct control over when the list is complete, which is arguably better UX than a silent wait.
+- The `[Continuar adicionando]` button makes the interaction model obvious — the user is never left wondering whether the bot "got" their last message.
+
+---
+
+## ADR-026: Location Privacy — Upgrade H3 Resolution from 8 to 9 or 10
+
+**Status:** Accepted
+**Date:** 2026-05-13
+**Supersedes:** resolution choice in ADR-010
+
+### Context
+H3 resolution 8 has a cell diameter of ~461 m. During the first real user test, two users ~300 m apart were snapped to the same H3 centroid, resulting in `dist_m = 0` and the UI displaying "0 m" — indistinguishable from being at the same location.
+
+A display-only fix ("Perto (< 500 m)") was considered and rejected: it masks the problem without solving it, and the distance field loses informational value for the ~461 m radius around each user.
+
+With few active users in test, invalidating existing locations (forcing re-share) is acceptable.
+
+| Resolution | Avg cell diameter | Privacy impact |
+|---|---|---|
+| 8 (current) | ~461 m | High — neighbourhood-level |
+| 9 | ~174 m | Medium — city-block range |
+| 10 | ~65 m | Lower — half-block range, centroid still hides exact position |
+
+### Decision
+Upgrade to **resolution 9** as the minimum. Evaluate **resolution 10** for São Paulo urban density (~100 m city blocks) where resolution 9 may still collapse nearby users.
+
+Implementation: a new migration that updates the H3-snap function to use the new resolution and sets `location = NULL` for all active users (they re-share on next interaction).
+
+### Rationale
+- Resolution 9 eliminates the collapse for users >174 m apart, which covers most urban cases.
+- Resolution 10 at ~65 m is still privacy-preserving because the stored value is the cell centroid, not the exact GPS point. Acceptable trade-off for a dense urban use case.
+- The migration approach (NULL + re-share) is simpler than re-computing all existing coordinates from scratch, and with few test users the friction is low.
+
+### Consequences
+- All existing users will need to re-share their location. The bot should detect `location IS NULL` and prompt re-share on next interaction (already handled by the onboarding flow's location step).
+- Update the H3 resolution constant in `src/utils/h3.ts` (or equivalent) to match the chosen resolution.
+- Tests that assert specific H3 cell assignments must be updated to use the new resolution.
+
