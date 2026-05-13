@@ -102,6 +102,13 @@ describe('formatProfiles', () => {
     const output = formatProfiles(entries);
     expect(output).not.toContain('1,2');
   });
+
+  it('compacts consecutive sticker codes in profiles', () => {
+    const entries = [makeEntry(1, 'Joao', ['BRA1','BRA2','BRA3','BRA4','BRA5'], 500)];
+    const output = formatProfiles(entries);
+    expect(output).toContain('BRA1-5');
+    expect(output).not.toContain('BRA1, BRA2');
+  });
 });
 
 describe('formatBilateralList', () => {

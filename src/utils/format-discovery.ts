@@ -1,4 +1,5 @@
 import { DiscoveryEntry } from '../types/index.js';
+import { compactCodes } from './listing-parser.js';
 
 export function formatDistance(distM: number): string {
   if (distM < 1000) return `${Math.round(distM)} m`;
@@ -22,7 +23,7 @@ export function formatDiscoveryList(entries: DiscoveryEntry[]): string {
 export function formatProfiles(entries: DiscoveryEntry[]): string {
   const profiles = entries.map((e) => {
     const dist = formatDistance(e.dist_m);
-    const codes = e.items.join(', ');
+    const codes = compactCodes(e.items);
     return `${e.name} - ${dist}\nFigurinhas: ${codes}`;
   });
 
