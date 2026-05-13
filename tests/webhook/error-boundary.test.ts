@@ -19,6 +19,15 @@ import * as usersDb from '../../src/db/users.js';
 import * as router from '../../src/webhook/router.js';
 import * as zapi from '../../src/services/zapi.js';
 
+const GROUP_PAYLOAD = {
+  type: 'ReceivedCallback',
+  phone: '120363043597026220@g.us',
+  instanceId: 'test-instance',
+  messageId: 'test-msg-id',
+  fromMe: false,
+  text: { message: 'oi' },
+};
+
 const VALID_PAYLOAD = {
   type: 'ReceivedCallback',
   phone: '5511999999999',
@@ -56,6 +65,31 @@ beforeEach(() => {
   vi.mocked(usersDb.checkRateLimit).mockResolvedValue(ok(true));
   vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
   vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+});
+
+describe('group JID guard in webhook handler', () => {
+  it('returns 200 silently without calling findUser when phone is a group JID', async () => {
+    const req = makeReq(GROUP_PAYLOAD);
+    const res = makeRes();
+
+    await handler(req as never, res as never);
+
+    expect(usersDb.findUser).not.toHaveBeenCalled();
+    expect(router.route).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ ok: true });
+  });
+
+  it('does not trigger group guard for a normal phone number', async () => {
+    vi.mocked(router.route).mockResolvedValue(ok(undefined));
+    const req = makeReq();
+    const res = makeRes();
+
+    await handler(req as never, res as never);
+
+    expect(usersDb.findUser).toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
 });
 
 describe('error boundary in webhook handler', () => {
