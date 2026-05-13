@@ -12,7 +12,7 @@
 | Hosting | Vercel (serverless) | Webhook receiver + API routes |
 | WhatsApp | Z-API (managed SaaS) | REST API + native webhooks, no self-hosting |
 | Database | Supabase (PostgreSQL + PostGIS) | Geospatial queries via PostGIS, connection pooler required |
-| Location privacy | H3 (resolution 8) | Snap coordinates before storage — never store exact GPS |
+| Location privacy | H3 (resolution 10) | Snap coordinates before storage — never store exact GPS |
 | ORM | Supabase JS client + raw SQL for geo | No heavy ORM — keep it lean |
 | Logging | Pino (structured JSON) | Use `logger.info/warn/error` always |
 | Validation | Zod | All external inputs must be validated |

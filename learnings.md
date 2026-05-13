@@ -280,3 +280,27 @@ SELECT id, name, neighborhood, active FROM meeting_places ORDER BY created_at DE
 **Impact:** The migration `20260503010000_pg_cron_expiry_sweep.sql` has a documented pre-step. The `npm run migrate` workflow must be preceded by the manual dashboard toggle. See ADR-023 for the broader pg_cron decision.
 
 **Action:** Added a prominent comment in the migration file. Added to PR checklist. For future reference: any extension in Supabase's "restricted" list needs a UI toggle first.
+
+---
+
+## 2026-05-13 — H3 resolution 8 collapses users within ~461 m to the same centroid (dist_m = 0)
+
+**Hypothesis / Question:** H3 resolution 8 preserves location privacy without impacting distance UX in urban areas.
+
+**Observation:** Two test users ~300 m apart in a real-world test were both snapped to the same H3 cell centroid. PostGIS returned `dist_m = 0` and the UI displayed "0 m" — identical to being at the same location.
+
+**Impact:** The distance field loses all informational value for users within ~461 m of each other. Appears as a geolocation bug to the user.
+
+**Action:** Upgrade H3 resolution from 8 to 9 (~174 m) or 10 (~65 m). With few active test users, setting `location = NULL` and requesting re-share is acceptable. See ADR-026. A display-only fix ("Perto (< 500 m)") was rejected as it masks the problem without solving it.
+
+---
+
+## 2026-05-13 — Z-API sends group message webhooks to the bot; groups trigger onboarding flow
+
+**Hypothesis / Question:** The bot only receives webhook callbacks from direct (1:1) WhatsApp chats.
+
+**Observation:** When the bot creates a WhatsApp group and is added to it as a participant, Z-API delivers every subsequent group message as a webhook to the bot's endpoint. The group's JID (phone field) does not match any user in the DB, so the router falls through to the onboarding path — users in the group see "Para começar, informe seu nome" in the middle of their trade conversation.
+
+**Impact:** Every message in the group produces an unwanted onboarding reply, making the group unusable for its intended purpose.
+
+**Action:** Detect group JIDs in the webhook handler (`api/webhook.ts`) before calling `findUser`, and return 200 silently. Group JID format in Z-API differs from individual JIDs (confirmed by inspection of the raw payload). See US-10.3.

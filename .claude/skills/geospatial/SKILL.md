@@ -11,9 +11,9 @@ description: "Use this skill when writing any code that involves user location: 
 1. Receive raw GPS from WhatsApp
       { latitude: -23.55051, longitude: -46.63382 }
 
-2. Snap to H3 hex center at resolution 8 (~460m precision)
+2. Snap to H3 hex center at resolution 10 (~65m precision)
       import { latLngToCell, cellToLatLng } from 'h3-js';
-      const cell = latLngToCell(lat, lng, 8);
+      const cell = latLngToCell(lat, lng, 10);
       const [snappedLat, snappedLng] = cellToLatLng(cell);
 
 3. Store as PostGIS geometry (snapped coordinates only)
@@ -40,7 +40,7 @@ export async function saveUserLocation(
   lat: number,
   lng: number
 ): Promise<Result<void, Error>> {
-  const cell = latLngToCell(lat, lng, 8);
+  const cell = latLngToCell(lat, lng, 10);
   const [snappedLat, snappedLng] = cellToLatLng(cell);
 
   const { error } = await supabase.rpc('update_user_location', {

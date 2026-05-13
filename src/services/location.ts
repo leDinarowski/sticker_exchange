@@ -3,7 +3,7 @@ import { latLngToCell, cellToLatLng } from 'h3-js';
 import { supabase } from '../db/client.js';
 import { logger } from '../utils/logger.js';
 
-const H3_RESOLUTION = 8;
+const H3_RESOLUTION = 10;
 
 export async function saveUserLocation(
   userId: string,

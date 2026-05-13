@@ -215,6 +215,79 @@ This document defines the implementation sequence, phase rationale, and inter-ph
 
 ---
 
+## Phase 11 — Bug Fixes & UX Improvements (Post First Real Test)
+
+**Goal:** Corrigir os 6 problemas identificados durante o primeiro teste real com usuários e
+elevar a qualidade da UX antes de escalar para mais testadores.
+
+**Depends on:** Phase 10 (First Real User Test — completed)
+
+### US-11.1 — Precisão geográfica: upgrade H3 de resolução 8 para 9 ou 10
+
+Dois usuários a ~300 m de distância real aparecem como "0 m" um do outro porque ambos ficam
+dentro da mesma célula H3 (resolução 8 tem ~461 m de diâmetro). Com resolução 9 (~174 m) ou
+10 (~65 m), esse colapso desaparece.
+
+Como há poucos usuários em teste, perder as localizações existentes é aceitável — eles precisarão
+re-compartilhar a localização na próxima mensagem. A escolha de resolução final (9 vs 10) depende
+do trade-off entre precisão (~174 m vs ~65 m) e privacidade. Resolução 9 é o mínimo; resolução 10
+é segura para áreas urbanas densas onde a maioria dos usuários está.
+
+Mudanças envolvidas: nova migration SQL que altera a função de H3-snap + invalida localizações
+existentes; update da constante de resolução no código TypeScript; atualização dos ADRs e testes.
+
+### US-11.2 — Compactação de figurinhas no perfil de discovery
+
+Ao ver o perfil de outra pessoa em "Olhar em Volta", as figurinhas aparecem como
+"BRA1, BRA2, BRA3, BRA4, BRA5" em vez de "BRA1-5". Isso torna listas longas ilegíveis.
+
+A lógica de compactação por intervalos já existe em `formatListingPreview()` para o fluxo de
+confirmação; basta extraí-la como função compartilhada e aplicá-la também em `formatProfiles()`.
+
+### US-11.3 — Bot em loop de onboarding dentro do grupo criado
+
+Quando o bot cria o grupo e é adicionado a ele, qualquer mensagem dos participantes dispara
+o webhook. O JID do grupo não corresponde a nenhum usuário, então o bot inicia o fluxo de
+onboarding dentro do grupo — "Para começar, informe seu nome" aparece no meio da conversa.
+
+A solução é detectar o formato do `phone` no payload Z-API para mensagens de grupo (JIDs de
+grupo têm formato diferente dos individuais) e descartar essas mensagens antes do roteamento,
+devolvendo 200 silencioso ao Z-API.
+
+### US-11.4 — Diagnóstico e seed de pontos de encontro
+
+Usuários reportam que o local de encontro não apareceu no grupo após a conexão. O código em
+`connection-response.ts` já envia a sugestão, mas de forma não-fatal — se a tabela
+`meeting_places` estiver vazia ou a query falhar, o bot apenas omite a mensagem sem logar.
+
+Esta story tem duas partes: (a) melhorar a observabilidade distinguindo "lugar não encontrado"
+de "query com erro", e (b) garantir que a tabela `meeting_places` tenha dados cadastrados para
+a área de teste.
+
+### US-11.5 — Confirmação de nome no onboarding
+
+Hoje o nome digitado pelo usuário é salvo diretamente sem confirmação. Digitou "João da Sliva"
+por engano? Não há como corrigir sem reiniciar o cadastro. O padrão de echo-back com
+[Confirmar] [Alterar] já existe para figurinhas; basta replicá-lo para o passo do nome.
+
+### US-11.6 — Acumulação de figurinhas enviadas em mensagens separadas
+
+Ao enviar "BRA1", depois "BRA4", depois "BRA7" como três mensagens distintas, o bot processa
+cada uma individualmente e apenas a última ("BRA7") é confirmada — as duas primeiras são
+substituídas. O usuário percebe isso como o bot "ignorando" mensagens.
+
+A solução é um modo de acumulação: cada nova mensagem de códigos é somada ao contexto já
+acumulado, e o bot exibe a lista corrente com opções explícitas [Continuar adicionando] [Confirmar]
+[Corrigir]. Isso é preferível a um debounce por timer porque (a) serverless não mantém estado
+entre invocações, (b) dá ao usuário controle direto sobre quando a lista está pronta.
+
+**Done when:** Todos os 6 itens acima têm testes passando e foram validados manualmente com
+pelo menos dois números de WhatsApp distintos.
+
+**Estimated effort:** 4–5 dias
+
+---
+
 ## Future Phases (Post-Validation)
 
 These phases are not scheduled — they depend on what Phase 7 reveals.
