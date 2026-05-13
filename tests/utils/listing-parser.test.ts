@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseListingInput, formatListingPreview } from '../../src/utils/listing-parser.js';
+import { parseListingInput, formatListingPreview, compactCodes } from '../../src/utils/listing-parser.js';
 
 describe('parseListingInput', () => {
   // ── Happy path — single and multi-code inputs ─────────────────────────────
@@ -193,9 +193,9 @@ describe('formatListingPreview', () => {
     expect(formatListingPreview(['BRA5', 'ARG3', 'FWC8'])).toBe('BRA5, ARG3, FWC8');
   });
 
-  it('returns simple join for exactly 10 codes', () => {
+  it('compacts exactly 10 consecutive codes into a range', () => {
     const codes = ['BRA1','BRA2','BRA3','BRA4','BRA5','BRA6','BRA7','BRA8','BRA9','BRA10'];
-    expect(formatListingPreview(codes)).toBe(codes.join(', '));
+    expect(formatListingPreview(codes)).toBe('BRA1-10');
   });
 
   it('collapses consecutive numbers into ranges for >10 codes', () => {
@@ -206,11 +206,40 @@ describe('formatListingPreview', () => {
   });
 
   it('does not collapse non-consecutive numbers', () => {
-    // BRA has only 5 and 7 (non-consecutive); ARG1-9 fills the >10 threshold
     const codes = ['BRA5','BRA7','ARG1','ARG2','ARG3','ARG4','ARG5','ARG6','ARG7','ARG8','ARG9'];
     const result = formatListingPreview(codes);
-    expect(result).toContain('BRA5');     // BRA5 appears standalone
-    expect(result).toContain('BRA7');     // BRA7 appears standalone
-    expect(result).not.toContain('BRA5-7'); // not collapsed into a range
+    expect(result).toContain('BRA5');
+    expect(result).toContain('BRA7');
+    expect(result).not.toContain('BRA5-7');
+  });
+});
+
+describe('compactCodes', () => {
+  it('returns empty string for empty array', () => {
+    expect(compactCodes([])).toBe('');
+  });
+
+  it('returns single code unchanged', () => {
+    expect(compactCodes(['BRA5'])).toBe('BRA5');
+  });
+
+  it('collapses consecutive numbers into a range', () => {
+    expect(compactCodes(['BRA1','BRA2','BRA3'])).toBe('BRA1-3');
+  });
+
+  it('collapses multiple prefixes independently', () => {
+    expect(compactCodes(['BRA1','BRA2','ARG1','ARG2'])).toBe('BRA1-2, ARG1-2');
+  });
+
+  it('does not collapse non-consecutive numbers', () => {
+    expect(compactCodes(['BRA5','BRA7'])).toBe('BRA5, BRA7');
+  });
+
+  it('handles mixed consecutive and non-consecutive within a prefix', () => {
+    expect(compactCodes(['BRA1','BRA2','BRA4'])).toBe('BRA1-2, BRA4');
+  });
+
+  it('always compacts regardless of list size (small lists too)', () => {
+    expect(compactCodes(['BRA1','BRA2','BRA3','BRA4','BRA5'])).toBe('BRA1-5');
   });
 });

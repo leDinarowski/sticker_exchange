@@ -114,17 +114,14 @@ function validateCode(code: string): Result<void, string> {
   return ok(undefined);
 }
 
-export function formatListingPreview(codes: string[]): string {
-  if (codes.length === 0) return '(nenhuma)';
-  if (codes.length <= 10) return codes.join(', ');
+export function compactCodes(codes: string[]): string {
+  if (codes.length === 0) return '';
 
   const byPrefix: Record<string, number[]> = {};
   for (const code of codes) {
     const match = code.match(/^([A-Z]{2,3})(\d+)$/);
     if (!match) continue;
-    const prefix = match[1]!;
-    const numStr = match[2]!;
-    (byPrefix[prefix] ??= []).push(parseInt(numStr, 10));
+    (byPrefix[match[1]!] ??= []).push(parseInt(match[2]!, 10));
   }
 
   const parts: string[] = [];
@@ -144,4 +141,9 @@ export function formatListingPreview(codes: string[]): string {
   }
 
   return parts.join(', ');
+}
+
+export function formatListingPreview(codes: string[]): string {
+  if (codes.length === 0) return '(nenhuma)';
+  return compactCodes(codes);
 }

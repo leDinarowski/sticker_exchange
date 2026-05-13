@@ -176,10 +176,10 @@
 - [DONE — 2026-05-13] Testes: H3-snap para dois pontos a 300 m → dist_m > 0; regressão em todos os testes geoespaciais existentes
 
 **US-10.2 — Compactar lista de figurinhas no perfil de discovery**
-- [ ] Extrair função `compactCodes(codes: string[]): string` de `formatListingPreview()` em `src/utils/listing-parser.ts`
-- [ ] Aplicar compactação sempre (remover o guard `codes.length > 10`)
-- [ ] Usar `compactCodes` em `formatProfiles()` em `src/utils/format-discovery.ts:25`
-- [ ] Testes: `compactCodes(['BRA1','BRA2','BRA3','BRA4','BRA5'])` → `'BRA1-5'`; prefixos múltiplos; lista de 1 item
+- [DONE — 2026-05-13] Extrair função `compactCodes(codes: string[]): string` de `formatListingPreview()` em `src/utils/listing-parser.ts`
+- [DONE — 2026-05-13] Aplicar compactação sempre (remover o guard `codes.length > 10`)
+- [DONE — 2026-05-13] Usar `compactCodes` em `formatProfiles()` em `src/utils/format-discovery.ts:25`
+- [DONE — 2026-05-13] Testes: `compactCodes(['BRA1','BRA2','BRA3','BRA4','BRA5'])` → `'BRA1-5'`; prefixos múltiplos; lista de 1 item
 
 **US-10.3 — Ignorar mensagens de grupo no webhook**
 - [DONE — 2026-05-13] Inspecionar payload Z-API para mensagem de grupo (logar ou consultar docs) para confirmar formato do `phone`
