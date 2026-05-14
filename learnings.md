@@ -204,6 +204,18 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-05-14 — ADR-025 button label "Continuar adicionando" exceeds WhatsApp's 20-char limit
+
+**Hypothesis / Question:** Can we use "Continuar adicionando" as the button label for the accumulation mode continuation button?
+
+**Observation:** "Continuar adicionando" is 21 characters — one over the 20-char WhatsApp button label hard limit enforced by Z-API. The ADR mentioned this label by name but the constraint was not checked at decision time.
+
+**Impact:** Minor naming deviation from ADR-025. Used "Adicionar mais" (14 chars) instead, which conveys the same intent and stays within budget.
+
+**Action:** Rule: always count button label characters before finalizing copy in ADRs or plans. The 20-char limit applies to all `sendButtons` calls and is enforced by Z-API at send time (returns error).
+
+---
+
 ## Pending Experiments
 
 - [ ] Z-API webhook latency: measure time from user message to Vercel handler invocation
