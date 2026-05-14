@@ -26,13 +26,12 @@ export async function handleConfirmingInventory(
   phone: string
 ): Promise<Result<void, Error>> {
   const buttonId = resolveButtonId(payload, BUTTON_LABELS);
-  const text = payload.text?.message?.trim() ?? '';
   const ctx = user.conversation_state?.context ?? {};
 
   // ── Confirmation phase: user tapped "Não tenho mais" and is confirming ───────
   if (ctx.pending_clear === true) {
-    const isConfirm = buttonId === 'clear_confirm' || text === '1';
-    const isCancel  = buttonId === 'clear_cancel'  || text === '2';
+    const isConfirm = buttonId === 'clear_confirm';
+    const isCancel  = buttonId === 'clear_cancel';
 
     if (isConfirm) {
       logger.info({ userId: user.id, event: 'inventory_cleared' });
@@ -59,9 +58,9 @@ export async function handleConfirmingInventory(
   }
 
   // ── Normal nudge response ─────────────────────────────────────────────────────
-  const isKeep   = buttonId === 'inv_keep'   || text === '1';
-  const isUpdate = buttonId === 'inv_update' || text === '2';
-  const isClear  = buttonId === 'inv_clear'  || text === '3';
+  const isKeep   = buttonId === 'inv_keep';
+  const isUpdate = buttonId === 'inv_update';
+  const isClear  = buttonId === 'inv_clear';
 
   if (isKeep) {
     logger.info({ userId: user.id, event: 'inventory_kept' });

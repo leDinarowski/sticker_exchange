@@ -13,12 +13,6 @@ const RADIUS_MAP: Record<string, number> = {
   r5: 5,
 };
 
-const TEXT_TO_RADIUS_ID: Record<string, string> = {
-  '1': 'r1',
-  '2': 'r3',
-  '3': 'r5',
-};
-
 const BUTTON_LABELS = {
   '1 km': 'r1',
   '3 km': 'r3',
@@ -29,14 +23,13 @@ export async function handleOnboardingRadius(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const textInput = payload.text?.message?.trim() ?? '';
-  const buttonId = resolveButtonId(payload, BUTTON_LABELS) || TEXT_TO_RADIUS_ID[textInput] || '';
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS);
   const radiusKm = RADIUS_MAP[buttonId];
 
   if (radiusKm === undefined) {
     return sendButtons(
       user.phone,
-      'Qual é o seu raio de busca?\n\n1️⃣ 1 km\n2️⃣ 3 km\n3️⃣ 5 km',
+      'Qual é o seu raio de busca?',
       [
         { id: 'r1', label: '1 km' },
         { id: 'r3', label: '3 km' },

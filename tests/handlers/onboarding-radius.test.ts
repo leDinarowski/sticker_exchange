@@ -43,17 +43,6 @@ function makePayload(buttonId: string): WebhookPayload {
   };
 }
 
-function makeTextPayload(text: string): WebhookPayload {
-  return {
-    type: 'ReceivedCallback' as const,
-    phone: '5511999999999',
-    instanceId: 'inst',
-    messageId: 'msg-1',
-    fromMe: false,
-    text: { message: text },
-  };
-}
-
 function makeDisplayButtonPayload(label: string): WebhookPayload {
   return {
     type: 'ReceivedCallback' as const,
@@ -99,15 +88,23 @@ describe('handleOnboardingRadius', () => {
   });
 
   it.each([
-    ['1', 1],
-    ['2', 3],
-    ['3', 5],
-  ])('saves radius from text input "%s" → %s km', async (text, expectedKm) => {
+    ['r1', '1 km', 1],
+    ['r3', '3 km', 3],
+    ['r5', '5 km', 5],
+  ])('saves radius from real Z-API callback {buttonId: %s, message: %s}', async (buttonId, label, expectedKm) => {
     vi.mocked(db.updateUserRadius).mockResolvedValue(ok(undefined));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
-    const result = await handleOnboardingRadius(mockUser, makeTextPayload(text));
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback' as const,
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      buttonsResponseMessage: { buttonId, message: label },
+    };
+    const result = await handleOnboardingRadius(mockUser, payload);
 
     expect(result.isOk()).toBe(true);
     expect(db.updateUserRadius).toHaveBeenCalledWith('uuid-1', expectedKm);
@@ -117,7 +114,7 @@ describe('handleOnboardingRadius', () => {
     ['1 km', 1],
     ['3 km', 3],
     ['5 km', 5],
-  ])('saves radius from selectedDisplayText "%s" when Z-API omits selectedButtonId', async (label, expectedKm) => {
+  ])('saves radius from selectedDisplayText "%s" (legacy format)', async (label, expectedKm) => {
     vi.mocked(db.updateUserRadius).mockResolvedValue(ok(undefined));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));

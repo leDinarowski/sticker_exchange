@@ -24,10 +24,7 @@ export async function handleOnboardingName(
 
   // ── Confirmation phase ────────────────────────────────────────────────────
   if (pendingName) {
-    const isConfirm = buttonId === 'confirm_name' || textInput === '1';
-    const isAlter   = buttonId === 'alter_name'   || textInput === '2';
-
-    if (isConfirm) {
+    if (buttonId === 'confirm_name') {
       const nameResult = await updateUserName(user.id, pendingName);
       if (nameResult.isErr()) return nameResult;
 
@@ -38,7 +35,7 @@ export async function handleOnboardingName(
 
       return sendButtons(
         user.phone,
-        'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?\n\n1️⃣ Aceito\n2️⃣ Recuso',
+        'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
         [
           { id: 'terms_accept', label: 'Aceito' },
           { id: 'terms_refuse', label: 'Recuso' },
@@ -46,7 +43,7 @@ export async function handleOnboardingName(
       );
     }
 
-    if (isAlter) {
+    if (buttonId === 'alter_name') {
       const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_NAME, {});
       if (transitionResult.isErr()) return transitionResult;
       return sendText(user.phone, RE_PROMPT);
@@ -83,7 +80,7 @@ export async function handleOnboardingName(
   // Valid name — echo-back
   const sendResult = await sendButtons(
     user.phone,
-    `Seu nome é ${textInput}, está certo?\n\n1️⃣ Confirmar\n2️⃣ Alterar`,
+    `Seu nome é ${textInput}, está certo?`,
     [
       { id: 'confirm_name', label: 'Confirmar' },
       { id: 'alter_name',   label: 'Alterar' },

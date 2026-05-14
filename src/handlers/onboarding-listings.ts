@@ -35,7 +35,7 @@ export async function handleOnboardingListings(
   const textInput = payload.text?.message?.trim() ?? '';
 
   // ── [Confirmar]: save accumulated list ────────────────────────────────────
-  if (buttonId === 'confirm_listings' || textInput === '1') {
+  if (buttonId === 'confirm_listings') {
     if (accumulated.length === 0) {
       return sendText(user.phone, rePrompt);
     }
@@ -65,7 +65,7 @@ export async function handleOnboardingListings(
   }
 
   // ── [Corrigir]: clear accumulated and re-prompt ───────────────────────────
-  if (buttonId === 'correct_listings' || textInput === '2') {
+  if (buttonId === 'correct_listings') {
     const newCtx = collectingWants ? { collecting_wants: true } : {};
     const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS, newCtx);
     if (transitionResult.isErr()) return transitionResult;
@@ -88,16 +88,15 @@ export async function handleOnboardingListings(
   const effectiveOp = accumulated.length > 0 ? pendingOp : op;
   const formatted = formatListingPreview(newAccumulated);
 
-  const optionsSuffix = '\n\n1️⃣ Confirmar\n2️⃣ Corrigir';
   let echoText: string;
   if (collectingWants) {
-    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
+    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else if (effectiveOp === 'add') {
-    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
+    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else if (effectiveOp === 'remove') {
-    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
+    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else {
-    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
+    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   }
 
   const sendResult = await sendButtons(
