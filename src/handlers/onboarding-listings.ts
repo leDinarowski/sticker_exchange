@@ -6,7 +6,7 @@ import { sendText, sendButtons } from '../services/zapi.js';
 import { applyListingUpdate, bumpListingsExpiry } from '../services/listings.js';
 import { replaceWantedListings } from '../db/bilateral.js';
 import { runBilateralQuery } from './bilateral.js';
-import { parseListingInput, formatListingPreview } from '../utils/listing-parser.js';
+import { parseListingInput, formatListingPreview, compactCodes } from '../utils/listing-parser.js';
 import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
 import { resolveButtonId } from '../webhook/utils.js';
@@ -64,9 +64,23 @@ export async function handleOnboardingListings(
     return showMainMenu(user.id, user.phone);
   }
 
-  // ── [Corrigir]: clear accumulated and re-prompt ───────────────────────────
+  // ── [Corrigir]: send the current list back as copyable text + instruction ─
   if (buttonId === 'correct_listings') {
     const newCtx = collectingWants ? { collecting_wants: true } : {};
+
+    if (accumulated.length > 0) {
+      const listResult = await sendText(user.phone, compactCodes(accumulated));
+      if (listResult.isErr()) return listResult;
+
+      const instructionResult = await sendText(
+        user.phone,
+        'Copie a lista acima, edite e me envie a versão corrigida. Vou substituir tudo pela nova lista.'
+      );
+      if (instructionResult.isErr()) return instructionResult;
+
+      return transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS, newCtx);
+    }
+
     const transitionResult = await transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS, newCtx);
     if (transitionResult.isErr()) return transitionResult;
     return sendText(user.phone, rePrompt);

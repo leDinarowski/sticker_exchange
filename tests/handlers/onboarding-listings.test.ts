@@ -283,7 +283,7 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
   });
 
-  it('clears accumulated and re-prompts on [Corrigir] button', async () => {
+  it('sends compacted list + instruction and clears accumulated on [Corrigir] when list is populated', async () => {
     const user = makeUser(['BRA5', 'ARG3']);
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -297,10 +297,30 @@ describe('handleOnboardingListings — confirmation phase', () => {
       ConversationStep.ONBOARDING_LISTINGS,
       {}
     );
+    // Msg 1: pure list (copyable, no prefix)
+    expect(zapi.sendText).toHaveBeenNthCalledWith(1, '5511999999999', 'BRA5, ARG3');
+    // Msg 2: instruction
+    expect(zapi.sendText).toHaveBeenNthCalledWith(
+      2,
+      '5511999999999',
+      expect.stringContaining('Copie a lista acima')
+    );
+  });
+
+  it('re-prompts with RE_PROMPT on [Corrigir] when accumulated is empty', async () => {
+    const user = makeUser();
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('correct_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_LISTINGS, {});
+    expect(zapi.sendText).toHaveBeenCalledTimes(1);
     expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('figurinhas'));
   });
 
-  it('clears accumulated on selectedDisplayText "Corrigir" when Z-API omits selectedButtonId', async () => {
+  it('sends compacted list on selectedDisplayText "Corrigir" when Z-API omits selectedButtonId', async () => {
     const user = makeUser(['BRA5', 'ARG3']);
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -310,6 +330,7 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(result.isOk()).toBe(true);
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_LISTINGS, {});
+    expect(zapi.sendText).toHaveBeenNthCalledWith(1, '5511999999999', 'BRA5, ARG3');
   });
 
   it('propagates error when applyListingUpdate fails', async () => {
@@ -462,7 +483,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
   });
 
-  it('clears accumulated but preserves collecting_wants on [Corrigir]', async () => {
+  it('sends compacted list + instruction and preserves collecting_wants on [Corrigir]', async () => {
     const user = makeUser(['BRA5'], { collecting_wants: true });
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -475,9 +496,11 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
       ConversationStep.ONBOARDING_LISTINGS,
       { collecting_wants: true }
     );
-    expect(zapi.sendText).toHaveBeenCalledWith(
+    expect(zapi.sendText).toHaveBeenNthCalledWith(1, '5511999999999', 'BRA5');
+    expect(zapi.sendText).toHaveBeenNthCalledWith(
+      2,
       '5511999999999',
-      expect.stringContaining('figurinhas você busca')
+      expect.stringContaining('Copie a lista acima')
     );
   });
 
@@ -493,7 +516,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(listingsService.applyListingUpdate).toHaveBeenCalledWith('uuid-1', 'sticker', expect.any(Object));
   });
 
-  it('clears accumulated on listResponseMessage selectedRowId "correct_listings" (send-button-list callback)', async () => {
+  it('sends compacted list on listResponseMessage selectedRowId "correct_listings" (send-button-list callback)', async () => {
     const user = makeUser(['BRA5']);
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -506,5 +529,6 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
       ConversationStep.ONBOARDING_LISTINGS,
       {}
     );
+    expect(zapi.sendText).toHaveBeenNthCalledWith(1, '5511999999999', 'BRA5');
   });
 });
