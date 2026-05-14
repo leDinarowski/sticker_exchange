@@ -24,6 +24,9 @@ vi.mock('../../src/db/meeting-places.js', () => ({
 vi.mock('../../src/utils/format-meeting-place.js', () => ({
   formatMeetingPlaceMessage: vi.fn(),
 }));
+vi.mock('../../src/utils/logger.js', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
 
 import { handleAwaitingMatchResponse } from '../../src/handlers/connection-response.js';
 import * as usersDb from '../../src/db/users.js';
@@ -32,6 +35,7 @@ import * as zapi from '../../src/services/zapi.js';
 import * as idleHandler from '../../src/handlers/idle.js';
 import * as meetingPlacesDb from '../../src/db/meeting-places.js';
 import * as formatMeetingPlace from '../../src/utils/format-meeting-place.js';
+import * as loggerModule from '../../src/utils/logger.js';
 import { ConversationStep, Match, MatchStatus, User } from '../../src/types/index.js';
 import { WebhookPayload } from '../../src/webhook/schema.js';
 
@@ -423,6 +427,27 @@ describe('meeting place suggestion — no place found', () => {
     expect(result.isOk()).toBe(true);
     expect(formatMeetingPlace.formatMeetingPlaceMessage).not.toHaveBeenCalled();
     expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
+  });
+
+  it('logs meeting_place_not_found at info level when no place is within radius', async () => {
+    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: MATCH_ID,
+      pending_target_name: 'Alice',
+    });
+    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
+
+    setupAcceptMocks(userA, userB);
+    vi.mocked(meetingPlacesDb.findNearestMeetingPlace).mockResolvedValue(ok(null));
+
+    await handleAwaitingMatchResponse(
+      userB,
+      makeButtonPayload(`match_accept_${MATCH_ID}`),
+      userB.phone
+    );
+
+    expect(vi.mocked(loggerModule.logger.info)).toHaveBeenCalledWith(
+      expect.objectContaining({ event: 'meeting_place_not_found', matchId: MATCH_ID })
+    );
   });
 });
 

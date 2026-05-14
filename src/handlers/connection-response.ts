@@ -140,6 +140,8 @@ async function processAccept(
     if (suggest.isErr()) {
       logger.warn({ event: 'meeting_place_send_failed', matchId, error: suggest.error.message });
     }
+  } else {
+    logger.info({ event: 'meeting_place_not_found', matchId });
   }
 
   const upd2 = await updateMatchStatus(matchId, MatchStatus.CONNECTED);
