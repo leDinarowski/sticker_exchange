@@ -717,3 +717,54 @@ instead triggering Corrigir (clear). The bug was masked in tests because tests u
 - Z-API may return button clicks as `buttonsResponseMessage.selectedButtonId` OR `listResponseMessage.selectedRowId` depending on account configuration. The `resolveButtonId()` helper in `src/webhook/router.ts` normalises both. **Never access button fields directly in handlers.**
 - The Zod schema uses `selectedButtonId: z.string().optional()` with `.passthrough()` so unexpected fields from Z-API do not cause parse failures. If `webhook_parse_failed` appears in logs for button responses, the `rawBody` field in the log will reveal the actual Z-API structure.
 
+---
+
+## ADR-028: Listing Input Debounce via `waitUntil` + `last_seq` Token
+
+**Status:** Accepted
+**Date:** 2026-05-14
+**Amends:** ADR-025 (Explicit accumulation buttons are kept; per-message echo is replaced by a trailing echo.)
+
+### Context
+With explicit accumulation in place (ADR-025), a user who sends "BRA3" and "BRA5" back-to-back receives two echo-back messages in rapid succession:
+
+```
+Bot: Lista atual: BRA3. Continue digitando...
+Bot: Lista atual: BRA3, BRA5. Continue digitando...
+```
+
+The intermediate echo adds noise, and the final echo is the only one that matters. The desired behaviour is to wait a short window after the last message and send a single cumulative echo.
+
+The architecture is Vercel Functions (Fluid Compute, stateless). Three approaches were evaluated:
+
+| Approach | Infra cost | Complexity | UX latency floor |
+|---|---|---|---|
+| Vercel Queues with delay | New product (beta), provisioning | Moderate | Seconds (queue dispatch) |
+| pg_cron polling | Existing | Low (SQL) | 60s minimum granularity |
+| `waitUntil` + sequence token | Already available via `@vercel/functions` | Low (single helper) | Sub-second |
+
+### Decision
+Add an opt-in debounce inside the existing `ONBOARDING_LISTINGS` text-input handler:
+1. Each text message persists `last_seq = Date.now()` in `context` (JSONB) alongside the accumulated codes.
+2. The handler schedules a trailing echo via `waitUntil` from `@vercel/functions`, which sleeps `DEBOUNCE_MS` (3500 ms) and then re-reads the user's state.
+3. The trailing echo only sends if **both** guards pass:
+   - `ctx.last_seq === seq`: no newer message has overwritten the token, AND
+   - `step === ONBOARDING_LISTINGS`: the user has not already clicked Confirmar/Corrigir.
+4. Behaviour is gated by `process.env.DEBOUNCE_ENABLED === 'true'`. Default off in first deploy to validate the path in production before activating.
+
+The echo text construction is extracted into a pure `buildEchoText(accumulated, op, collectingWants)` function and shared between the synchronous (flag-off) and trailing (flag-on) paths.
+
+### Rationale
+- **Zero new infrastructure**: `@vercel/functions` is a small first-party package; no queue, Redis, or cron needed.
+- **Fluid Compute primitive**: `waitUntil` extends the function lifetime past the response, which is exactly the semantic needed for trailing work.
+- **`last_seq` lives in existing JSONB**: no schema migration. The token doubles as both an idempotency marker (older timers self-suppress) and a debug breadcrumb.
+- **Two independent guards**: `last_seq` covers concurrent text messages; `step` covers button clicks that exit the state. Without the state guard, a user clicking Confirmar mid-window would see a "fantasma" echo after returning to IDLE.
+- **Flag-gated rollout**: a single env var toggles the behaviour. If anything regresses, flipping `DEBOUNCE_ENABLED=false` reverts to the previous per-message echo without a deploy.
+
+### Consequences
+- **Telemetry**: three new structured-log events distinguish outcomes — `listings_echo_sent`, `listings_echo_suppressed_by_seq`, `listings_echo_suppressed_by_state`. Production logs will show how often the debounce actually merges messages.
+- **Function billing**: each text input may hold the function instance for up to `DEBOUNCE_MS` after returning 200. On Fluid Compute, this counts as provisioned time, not active CPU — marginal cost. Multiple messages in a window share a single Fluid Compute instance.
+- **Acceptable failure mode**: if a function instance is terminated before its `waitUntil` resolves (deploy, autoscale), the echo is lost. The user's accumulated codes are still persisted; sending another message produces a fresh echo. No data loss.
+- **Test seam**: the `runTrailingEcho` helper accepts injectable `sleep`, `loadUser`, and `send` so tests run synchronously without real timers or DB.
+- **Operational behaviour**: with the flag off, the new code path is identical to the previous behaviour (one synchronous `sendButtons` per message). All pre-existing tests pass unchanged except for added `last_seq` field in transitioned context (now asserted via `objectContaining`).
+

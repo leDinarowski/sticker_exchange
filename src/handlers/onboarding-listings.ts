@@ -1,7 +1,8 @@
-import { Result } from 'neverthrow';
+import { Result, ok } from 'neverthrow';
+import { waitUntil } from '@vercel/functions';
 import { logger } from '../utils/logger.js';
 import { transitionState } from '../db/users.js';
-import { ConversationStep, User } from '../types/index.js';
+import { ConversationStateContext, ConversationStep, PendingOp, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
 import { applyListingUpdate, bumpListingsExpiry } from '../services/listings.js';
 import { replaceWantedListings } from '../db/bilateral.js';
@@ -10,6 +11,31 @@ import { parseListingInput, formatListingPreview, compactCodes } from '../utils/
 import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
 import { resolveButtonId } from '../webhook/utils.js';
+import { runTrailingEcho } from '../utils/debounce.js';
+
+const DEBOUNCE_MS = 3500;
+
+function isDebounceEnabled(): boolean {
+  return process.env['DEBOUNCE_ENABLED'] === 'true';
+}
+
+function buildEchoText(
+  accumulated: string[],
+  op: PendingOp,
+  collectingWants: boolean
+): string {
+  const formatted = formatListingPreview(accumulated);
+  if (collectingWants) {
+    return `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+  }
+  if (op === 'add') {
+    return `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+  }
+  if (op === 'remove') {
+    return `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+  }
+  return `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+}
 
 const RE_PROMPT =
   'Envie os códigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
@@ -99,29 +125,20 @@ export async function handleOnboardingListings(
   const { op, codes } = parseResult.value;
   const newAccumulated = [...new Set([...accumulated, ...codes])];
   // Lock the operation from the first message; subsequent messages only contribute codes
-  const effectiveOp = accumulated.length > 0 ? pendingOp : op;
-  const formatted = formatListingPreview(newAccumulated);
+  const effectiveOp: PendingOp = accumulated.length > 0 ? pendingOp : op;
+  const debounceEnabled = isDebounceEnabled();
+  const seq = Date.now();
 
-  let echoText: string;
-  if (collectingWants) {
-    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
-  } else if (effectiveOp === 'add') {
-    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
-  } else if (effectiveOp === 'remove') {
-    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
-  } else {
-    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
-  }
+  const newCtx: ConversationStateContext = collectingWants
+    ? { collecting_wants: true, accumulated_codes: newAccumulated, last_seq: seq }
+    : { accumulated_codes: newAccumulated, pending_op: effectiveOp, last_seq: seq };
 
-  const sendResult = await sendButtons(
-    user.phone,
-    echoText,
-    [
-      { id: 'confirm_listings',  label: 'Confirmar' },
-      { id: 'correct_listings',  label: 'Corrigir' },
-    ]
+  const transitionResult = await transitionState(
+    user.id,
+    ConversationStep.ONBOARDING_LISTINGS,
+    newCtx
   );
-  if (sendResult.isErr()) return sendResult;
+  if (transitionResult.isErr()) return transitionResult;
 
   logger.info({
     userId: user.id,
@@ -129,11 +146,29 @@ export async function handleOnboardingListings(
     total: newAccumulated.length,
     added: codes.length,
     op: effectiveOp,
+    debounced: debounceEnabled,
   });
 
-  const newCtx = collectingWants
-    ? { collecting_wants: true, accumulated_codes: newAccumulated }
-    : { accumulated_codes: newAccumulated, pending_op: effectiveOp };
+  if (debounceEnabled) {
+    waitUntil(
+      runTrailingEcho({
+        userId: user.id,
+        phone: user.phone,
+        seq,
+        delayMs: DEBOUNCE_MS,
+        buildEchoText,
+      })
+    );
+    return ok(undefined);
+  }
 
-  return transitionState(user.id, ConversationStep.ONBOARDING_LISTINGS, newCtx);
+  const echoText = buildEchoText(newAccumulated, effectiveOp, collectingWants);
+  return sendButtons(
+    user.phone,
+    echoText,
+    [
+      { id: 'confirm_listings', label: 'Confirmar' },
+      { id: 'correct_listings', label: 'Corrigir' },
+    ]
+  );
 }
