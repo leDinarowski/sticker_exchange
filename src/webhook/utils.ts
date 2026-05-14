@@ -6,23 +6,21 @@ export function resolveButtonId(
   payload: WebhookPayload,
   labels: ButtonLabelMap = {}
 ): string {
-  const selectedButtonId = payload.buttonsResponseMessage?.selectedButtonId;
-  if (selectedButtonId) return selectedButtonId;
+  const btn = payload.buttonsResponseMessage;
 
-  const selectedRowId = payload.listResponseMessage?.selectedRowId;
-  if (selectedRowId) return selectedRowId;
+  const directId = btn?.buttonId || btn?.selectedButtonId;
+  if (directId) return directId;
 
-  const candidate =
-    payload.buttonsResponseMessage?.selectedDisplayText?.trim() ||
-    payload.text?.message?.trim();
+  const rowId = payload.listResponseMessage?.selectedRowId;
+  if (rowId) return rowId;
+
+  const candidate = btn?.message?.trim() || btn?.selectedDisplayText?.trim();
   if (!candidate) return '';
 
-  const exactMatch = labels[candidate];
-  if (exactMatch) return exactMatch;
+  const exact = labels[candidate];
+  if (exact) return exact;
 
   const normalized = candidate.toLowerCase();
-  const labelMatch = Object.entries(labels).find(
-    ([label]) => label.toLowerCase() === normalized
-  );
-  return labelMatch?.[1] ?? '';
+  const match = Object.entries(labels).find(([label]) => label.toLowerCase() === normalized);
+  return match?.[1] ?? '';
 }

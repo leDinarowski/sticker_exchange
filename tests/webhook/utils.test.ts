@@ -11,103 +11,87 @@ const BASE: WebhookPayload = {
 };
 
 describe('resolveButtonId', () => {
-  it('prefers selectedButtonId over selectedRowId and selectedDisplayText', () => {
+  it('returns buttonId from the real Z-API send-button-list callback', () => {
+    const payload: WebhookPayload = {
+      ...BASE,
+      buttonsResponseMessage: { buttonId: 'confirm_name', message: 'Confirmar' },
+    };
+
+    expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('confirm_name');
+  });
+
+  it('prefers buttonId over selectedButtonId', () => {
     const payload: WebhookPayload = {
       ...BASE,
       buttonsResponseMessage: {
-        selectedButtonId: 'confirm_name',
-        selectedDisplayText: 'Alterar',
+        buttonId: 'confirm_name',
+        selectedButtonId: 'alter_name',
       },
+    };
+
+    expect(resolveButtonId(payload)).toBe('confirm_name');
+  });
+
+  it('falls back to selectedButtonId when buttonId is absent (legacy format)', () => {
+    const payload: WebhookPayload = {
+      ...BASE,
+      buttonsResponseMessage: { selectedButtonId: 'confirm_name' },
+    };
+
+    expect(resolveButtonId(payload)).toBe('confirm_name');
+  });
+
+  it('uses selectedRowId when no buttonId or selectedButtonId is present', () => {
+    const payload: WebhookPayload = {
+      ...BASE,
       listResponseMessage: { selectedRowId: 'terms_accept' },
     };
 
-    expect(resolveButtonId(payload, { Alterar: 'alter_name' })).toBe('confirm_name');
+    expect(resolveButtonId(payload)).toBe('terms_accept');
   });
 
-  it('uses selectedRowId when selectedButtonId is absent', () => {
+  it('maps message (Z-API real label) when buttonId is null', () => {
     const payload: WebhookPayload = {
       ...BASE,
-      buttonsResponseMessage: { selectedDisplayText: 'Alterar' },
-      listResponseMessage: { selectedRowId: 'terms_accept' },
-    };
-
-    expect(resolveButtonId(payload, { Alterar: 'alter_name' })).toBe('terms_accept');
-  });
-
-  it('maps selectedDisplayText when Z-API omits button IDs', () => {
-    const payload: WebhookPayload = {
-      ...BASE,
-      buttonsResponseMessage: { selectedButtonId: null, selectedDisplayText: ' Confirmar ' },
+      buttonsResponseMessage: { buttonId: null, message: 'Confirmar' },
     };
 
     expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('confirm_name');
   });
 
-  it('matches selectedDisplayText case-insensitively', () => {
+  it('maps selectedDisplayText (legacy) when buttonId/selectedButtonId are absent', () => {
     const payload: WebhookPayload = {
       ...BASE,
-      buttonsResponseMessage: { selectedDisplayText: 'confirmar' },
+      buttonsResponseMessage: { selectedDisplayText: ' Confirmar ' },
     };
 
     expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('confirm_name');
   });
 
-  it('returns an empty string when no ID or known display text exists', () => {
+  it('matches label case-insensitively', () => {
     const payload: WebhookPayload = {
       ...BASE,
-      buttonsResponseMessage: { selectedDisplayText: 'Desconhecido' },
+      buttonsResponseMessage: { message: 'confirmar' },
+    };
+
+    expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('confirm_name');
+  });
+
+  it('returns empty string when no button data is present', () => {
+    const payload: WebhookPayload = {
+      ...BASE,
+      text: { message: 'Confirmar' },
     };
 
     expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('');
   });
 
-  it('maps text.message when no buttonsResponseMessage is present (Z-API native fallback)', () => {
+  it('returns empty string when label is unknown', () => {
     const payload: WebhookPayload = {
       ...BASE,
-      text: { message: 'Confirmar' },
+      buttonsResponseMessage: { message: 'Desconhecido' },
     };
 
-    expect(resolveButtonId(payload, { Confirmar: 'confirm_name', Alterar: 'alter_name' })).toBe(
-      'confirm_name'
-    );
-  });
-
-  it('matches text.message case-insensitively and trims whitespace', () => {
-    const payload: WebhookPayload = {
-      ...BASE,
-      text: { message: '  confirmar  ' },
-    };
-
-    expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('confirm_name');
-  });
-
-  it('returns empty string for text.message that does not match any label', () => {
-    const payload: WebhookPayload = {
-      ...BASE,
-      text: { message: 'Cayo' },
-    };
-
-    expect(resolveButtonId(payload, { Confirmar: 'confirm_name', Alterar: 'alter_name' })).toBe('');
-  });
-
-  it('returns empty string for text.message when no labels are provided (does not leak free text)', () => {
-    const payload: WebhookPayload = {
-      ...BASE,
-      text: { message: 'Confirmar' },
-    };
-
-    expect(resolveButtonId(payload)).toBe('');
-  });
-
-  it('prefers selectedDisplayText over text.message when both are present', () => {
-    const payload: WebhookPayload = {
-      ...BASE,
-      buttonsResponseMessage: { selectedDisplayText: 'Alterar' },
-      text: { message: 'Confirmar' },
-    };
-
-    expect(resolveButtonId(payload, { Confirmar: 'confirm_name', Alterar: 'alter_name' })).toBe(
-      'alter_name'
-    );
+    expect(resolveButtonId(payload, { Confirmar: 'confirm_name' })).toBe('');
   });
 });

@@ -8,6 +8,8 @@ export const webhookPayloadSchema = z.object({
   fromMe: z.boolean(),
   text: z.object({ message: z.string() }).optional(),
   buttonsResponseMessage: z.object({
+    buttonId: z.string().nullable().optional(),
+    message: z.string().nullable().optional(),
     selectedButtonId: z.string().nullable().optional(),
     selectedDisplayText: z.string().nullable().optional(),
   }).passthrough().optional(),

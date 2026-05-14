@@ -152,34 +152,6 @@ describe('handleAwaitingMatchResponse — respondent accepts (button)', () => {
   });
 });
 
-describe('handleAwaitingMatchResponse — respondent accepts (text fallback "1")', () => {
-  it('same accept outcome via plain text "1"', async () => {
-    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
-      pending_match_id: MATCH_ID,
-      pending_target_name: 'Alice',
-    });
-    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
-
-    vi.mocked(matchesDb.getMatchById).mockResolvedValue(ok(makePendingMatch()));
-    vi.mocked(matchesDb.updateMatchStatus).mockResolvedValue(ok(undefined));
-    vi.mocked(usersDb.findUserById).mockResolvedValue(ok(userA));
-    vi.mocked(zapi.createGroup).mockResolvedValue(ok('groupid@g.us'));
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
-
-    const result = await handleAwaitingMatchResponse(
-      userB,
-      makeTextPayload('1'),
-      userB.phone
-    );
-
-    expect(result.isOk()).toBe(true);
-    expect(zapi.createGroup).toHaveBeenCalled();
-    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
-  });
-});
-
 describe('handleAwaitingMatchResponse — respondent accepts (display text fallback)', () => {
   it('accepts via selectedDisplayText "Sim" when Z-API omits selectedButtonId', async () => {
     const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
@@ -237,29 +209,6 @@ describe('handleAwaitingMatchResponse — respondent declines (button)', () => {
     expect(zapi.sendText).toHaveBeenCalledWith(userA.phone, expect.stringContaining('não aceitou'));
     expect(usersDb.transitionState).toHaveBeenCalledWith(userA.id, ConversationStep.IDLE);
     expect(usersDb.transitionState).toHaveBeenCalledWith(userB.id, ConversationStep.IDLE);
-  });
-});
-
-describe('handleAwaitingMatchResponse — respondent declines (text fallback "2")', () => {
-  it('same decline outcome via plain text "2"', async () => {
-    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
-      pending_match_id: MATCH_ID,
-      pending_target_name: 'Alice',
-    });
-    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
-
-    vi.mocked(matchesDb.getMatchById).mockResolvedValue(ok(makePendingMatch()));
-    vi.mocked(matchesDb.updateMatchStatus).mockResolvedValue(ok(undefined));
-    vi.mocked(usersDb.findUserById).mockResolvedValue(ok(userA));
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
-
-    const result = await handleAwaitingMatchResponse(userB, makeTextPayload('2'), userB.phone);
-
-    expect(result.isOk()).toBe(true);
-    expect(zapi.createGroup).not.toHaveBeenCalled();
-    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.DECLINED);
   });
 });
 

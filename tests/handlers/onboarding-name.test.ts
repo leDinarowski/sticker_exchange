@@ -212,19 +212,6 @@ describe('handleOnboardingName — confirmation phase', () => {
     );
   });
 
-  it('saves name on text "1" (confirm alias)', async () => {
-    vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
-    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
-
-    const user = makeUser(undefined, { pending_name: 'Ana' });
-    const result = await handleOnboardingName(user, makePayload('1'));
-
-    expect(result.isOk()).toBe(true);
-    expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Ana');
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
-  });
-
   it('clears pending_name and re-prompts on [Alterar] button', async () => {
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -243,18 +230,6 @@ describe('handleOnboardingName — confirmation phase', () => {
       '5511999999999',
       expect.stringContaining('Claro')
     );
-  });
-
-  it('clears pending_name and re-prompts on text "2" (alter alias)', async () => {
-    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-
-    const user = makeUser(undefined, { pending_name: 'Ana' });
-    const result = await handleOnboardingName(user, makePayload('2'));
-
-    expect(result.isOk()).toBe(true);
-    expect(db.updateUserName).not.toHaveBeenCalled();
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME, {});
   });
 
   it('re-prompts on unrecognized input while pending_name is set', async () => {
@@ -343,29 +318,24 @@ describe('handleOnboardingName — confirmation phase', () => {
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
   });
 
-  it('saves name when Z-API forwards the button click as plain text.message "Confirmar"', async () => {
+  it('saves name when Z-API sends real callback {buttonId, message}', async () => {
     vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
     vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
     vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
 
     const user = makeUser(undefined, { pending_name: 'Cayo' });
-    const result = await handleOnboardingName(user, makePayload('Confirmar'));
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback' as const,
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-1',
+      fromMe: false,
+      buttonsResponseMessage: { buttonId: 'confirm_name', message: 'Confirmar' },
+    };
+    const result = await handleOnboardingName(user, payload);
 
     expect(result.isOk()).toBe(true);
     expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Cayo');
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
-  });
-
-  it('clears pending_name when Z-API forwards the button click as plain text.message "Alterar"', async () => {
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-
-    const user = makeUser(undefined, { pending_name: 'Cayo' });
-    const result = await handleOnboardingName(user, makePayload('Alterar'));
-
-    expect(result.isOk()).toBe(true);
-    expect(db.updateUserName).not.toHaveBeenCalled();
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME, {});
-    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Claro'));
   });
 });

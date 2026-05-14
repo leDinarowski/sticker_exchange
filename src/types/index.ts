@@ -109,6 +109,8 @@ export interface ZApiWebhookPayload {
   fromMe: boolean;
   text?: { message: string };
   buttonsResponseMessage?: {
+    buttonId?: string | null;
+    message?: string | null;
     selectedButtonId?: string | null;
     selectedDisplayText?: string | null;
   };

@@ -16,10 +16,9 @@ export async function handleOnboardingTerms(
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
   const buttonId = resolveButtonId(payload, BUTTON_LABELS);
-  const textInput = payload.text?.message?.trim().toLowerCase() ?? '';
 
-  const isAccept = buttonId === 'terms_accept' || textInput === '1' || textInput === 'aceito';
-  const isRefuse = buttonId === 'terms_refuse' || textInput === '2' || textInput === 'recuso';
+  const isAccept = buttonId === 'terms_accept';
+  const isRefuse = buttonId === 'terms_refuse';
 
   if (isAccept) {
     const consentResult = await recordConsent(user.id);
@@ -47,7 +46,7 @@ export async function handleOnboardingTerms(
 
   return sendButtons(
     user.phone,
-    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?\n\n1️⃣ Aceito\n2️⃣ Recuso',
+    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
     [
       { id: 'terms_accept', label: 'Aceito' },
       { id: 'terms_refuse', label: 'Recuso' },

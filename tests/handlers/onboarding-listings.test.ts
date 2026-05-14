@@ -255,19 +255,6 @@ describe('handleOnboardingListings — confirmation phase', () => {
     );
   });
 
-  it('saves accumulated_codes on text "1" (numeric fallback for confirm)', async () => {
-    const user = makeUser(['BRA5', 'ARG3']);
-    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
-    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
-
-    const result = await handleOnboardingListings(user, makeTextPayload('1'));
-
-    expect(result.isOk()).toBe(true);
-    expect(listingsService.applyListingUpdate).toHaveBeenCalled();
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.IDLE);
-  });
-
   it('saves accumulated_codes on selectedDisplayText "Confirmar" when Z-API omits selectedButtonId', async () => {
     const user = makeUser(['BRA5', 'ARG3']);
     vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
@@ -311,18 +298,6 @@ describe('handleOnboardingListings — confirmation phase', () => {
       {}
     );
     expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('figurinhas'));
-  });
-
-  it('clears accumulated and re-prompts on text "2" (numeric fallback for corrigir)', async () => {
-    const user = makeUser(['BRA5', 'ARG3']);
-    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-
-    const result = await handleOnboardingListings(user, makeTextPayload('2'));
-
-    expect(result.isOk()).toBe(true);
-    expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
-    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_LISTINGS, {});
   });
 
   it('clears accumulated on selectedDisplayText "Corrigir" when Z-API omits selectedButtonId', async () => {

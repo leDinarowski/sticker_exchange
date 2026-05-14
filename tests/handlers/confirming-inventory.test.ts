@@ -103,18 +103,6 @@ describe('handleConfirmingInventory — [Sim, ainda tenho]', () => {
     expect(listingsService.clearUserListings).not.toHaveBeenCalled();
   });
 
-  it('handles text "1" (trial account fallback)', async () => {
-    const user = makeUser();
-    vi.mocked(listingsService.bumpListingsExpiry).mockResolvedValue(ok(undefined));
-    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
-
-    const result = await handleConfirmingInventory(user, makeTextPayload('1'), user.phone);
-
-    expect(result.isOk()).toBe(true);
-    expect(listingsService.bumpListingsExpiry).toHaveBeenCalled();
-  });
-
   it('bumps expiry on selectedDisplayText "Sim, ainda tenho"', async () => {
     const user = makeUser();
     vi.mocked(listingsService.bumpListingsExpiry).mockResolvedValue(ok(undefined));
@@ -154,17 +142,6 @@ describe('handleConfirmingInventory — [Atualizar Figurinhas]', () => {
     expect(listingsService.clearUserListings).not.toHaveBeenCalled();
   });
 
-  it('handles text "2" (trial account fallback)', async () => {
-    const user = makeUser();
-    vi.mocked(listingsDb.getUserActiveListingsCount).mockResolvedValue(ok(3));
-    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
-
-    const result = await handleConfirmingInventory(user, makeTextPayload('2'), user.phone);
-
-    expect(result.isOk()).toBe(true);
-    expect(usersDb.transitionState).toHaveBeenCalledWith(user.id, ConversationStep.ONBOARDING_LISTINGS);
-  });
 });
 
 describe('handleConfirmingInventory — [Não tenho mais] — confirmation step', () => {
@@ -190,22 +167,6 @@ describe('handleConfirmingInventory — [Não tenho mais] — confirmation step'
         expect.objectContaining({ id: 'clear_confirm' }),
         expect.objectContaining({ id: 'clear_cancel' }),
       ])
-    );
-    expect(listingsService.clearUserListings).not.toHaveBeenCalled();
-  });
-
-  it('handles text "3" — also shows confirmation (trial account fallback)', async () => {
-    const user = makeUser();
-    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
-    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
-
-    const result = await handleConfirmingInventory(user, makeTextPayload('3'), user.phone);
-
-    expect(result.isOk()).toBe(true);
-    expect(usersDb.transitionState).toHaveBeenCalledWith(
-      user.id,
-      ConversationStep.CONFIRMING_INVENTORY,
-      { pending_clear: true }
     );
     expect(listingsService.clearUserListings).not.toHaveBeenCalled();
   });

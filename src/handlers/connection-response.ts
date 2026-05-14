@@ -99,11 +99,6 @@ function resolveRespondentAction(
   });
   if (buttonId === `match_accept_${matchId}`) return 'accept';
   if (buttonId === `match_decline_${matchId}`) return 'decline';
-
-  const text = payload.text?.message?.trim();
-  if (text === '1') return 'accept';
-  if (text === '2') return 'decline';
-
   return 'unknown';
 }
 
