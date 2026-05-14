@@ -28,7 +28,7 @@ export interface ConversationStateContext {
   mode?: 'discovery' | 'bilateral';
   discovery_list?: DiscoveryEntry[];
   selected_indices?: number[];
-  pending_listings?: string[];
+  accumulated_codes?: string[];
   pending_op?: 'set' | 'add' | 'remove';
   pending_match_id?: string;
   pending_match_ids?: string[];

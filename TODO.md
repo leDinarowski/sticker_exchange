@@ -200,9 +200,9 @@
 - [x] Atualizar schema de contexto JSONB em `.claude/skills/state-machine/SKILL.md`
 - [x] Testes: nome digitado → echo-back enviado + pending_name salvo; [Confirmar] → nome salvo; [Alterar] → re-prompt
 
-**US-10.6 — Modo de acumulação para figurinhas em mensagens separadas**
-- [ ] Em `src/handlers/onboarding-listings.ts`: ao receber códigos sem confirmação pendente, acrescentar a `context.accumulated_codes` (deduplicar)
-- [ ] Exibir lista corrente acumulada com botões [Continuar adicionando] [Confirmar] [Corrigir]
-- [ ] [Confirmar]: processar `accumulated_codes` como lista final; [Corrigir]: limpar acumulado, re-perguntar
-- [ ] Manter compatibilidade: enviar tudo de uma vez ainda funciona (acumula lista com 1 mensagem e pede confirmação)
-- [ ] Testes: 2 mensagens separadas → accumulated_codes contém ambas; duplicata → deduplica; [Confirmar] → salva combinado
+**US-10.6 — Modo de acumulação para figurinhas em mensagens separadas** [✅ 2026-05-14]
+- [x] Em `src/handlers/onboarding-listings.ts`: ao receber códigos sem confirmação pendente, acrescentar a `context.accumulated_codes` (deduplicar)
+- [x] Exibir lista corrente acumulada com botões [Adicionar mais] [Confirmar] [Corrigir]
+- [x] [Confirmar]: processar `accumulated_codes` como lista final; [Corrigir]: limpar acumulado, re-perguntar
+- [x] Manter compatibilidade: enviar tudo de uma vez ainda funciona (acumula lista com 1 mensagem e pede confirmação)
+- [x] Testes: 2 mensagens separadas → accumulated_codes contém ambas; duplicata → deduplica; [Confirmar] → salva combinado
