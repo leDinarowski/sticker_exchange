@@ -31,7 +31,7 @@ describe('handleNew', () => {
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME);
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('Bem-vindo')
+      expect.stringContaining('Oi!')
     );
   });
 

@@ -6,7 +6,7 @@ import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
 
 const MAX_RETRIES = 3;
-const RE_PROMPT = 'Envie seu nome (entre 2 e 50 caracteres).';
+const RE_PROMPT = 'Claro, qual é o seu nome?';
 
 export async function handleOnboardingName(
   user: User,
@@ -78,7 +78,7 @@ export async function handleOnboardingName(
   // Valid name — echo-back
   const sendResult = await sendButtons(
     user.phone,
-    `Nome: ${textInput}\n\nConfirma?`,
+    `Seu nome é ${textInput}, está certo?`,
     [
       { id: 'confirm_name', label: 'Confirmar' },
       { id: 'alter_name',   label: 'Alterar' },

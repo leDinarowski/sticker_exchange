@@ -66,11 +66,6 @@ export async function handleOnboardingListings(
     return sendText(user.phone, rePrompt);
   }
 
-  // ── [Adicionar mais]: acknowledge, no state change ────────────────────────
-  if (buttonId === 'continue_adding') {
-    return sendText(user.phone, 'Ok! Continue enviando os codigos.');
-  }
-
   // ── Text input: parse and accumulate ─────────────────────────────────────
   if (!textInput) {
     return sendText(user.phone, rePrompt);
@@ -89,20 +84,19 @@ export async function handleOnboardingListings(
 
   let echoText: string;
   if (collectingWants) {
-    echoText = `Você busca: ${formatted}. Continue ou confirme:`;
+    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else if (effectiveOp === 'add') {
-    echoText = `Adicionar: ${formatted}. Continue ou confirme:`;
+    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else if (effectiveOp === 'remove') {
-    echoText = `Remover: ${formatted}. Continue ou confirme:`;
+    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   } else {
-    echoText = `Lista atual: ${formatted}. Continue ou confirme:`;
+    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
   }
 
   const sendResult = await sendButtons(
     user.phone,
     echoText,
     [
-      { id: 'continue_adding',   label: 'Adicionar mais' },
       { id: 'confirm_listings',  label: 'Confirmar' },
       { id: 'correct_listings',  label: 'Corrigir' },
     ]

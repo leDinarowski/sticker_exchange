@@ -204,6 +204,18 @@ The sticker_context.md file contains the complete reference including all 48 tea
 
 ---
 
+## 2026-05-14 — Text fallback mapping silently broke when a new button was prepended to the array
+
+**Hypothesis / Question:** Adding "Adicionar mais" as the first button in the accumulation flow — does the text fallback still work correctly?
+
+**Observation:** No. The text fallback in `sendButtons` renders buttons as "1 - Label\n2 - Label…" in order. When "Adicionar mais" was prepended, the displayed text became "1 - Adicionar mais / 2 - Confirmar / 3 - Corrigir". But the handler code still had `textInput === '1'` → confirm and `textInput === '2'` → corrigir. Users typing "2" to confirm (as shown on screen) were hitting the corrigir branch — clearing their list. Tests did not catch this because they used `buttonId` (correct path), not `textInput` (fallback path).
+
+**Impact:** Every user on the text fallback who tried to confirm their sticker list had it silently cleared. No data was saved.
+
+**Action:** Removed "Adicionar mais" from the button array — it was redundant since users can just type more codes. With 2 buttons [Confirmar, Corrigir], the fallback mapping '1' = confirm, '2' = corrigir is unambiguous and matches the screen. Enabled native Z-API buttons (ADR-027) to eliminate text fallback issues long-term. Rule: whenever a button array changes order or gains/loses a button, audit ALL `textInput === 'N'` checks in the handler.
+
+---
+
 ## 2026-05-14 — ADR-025 button label "Continuar adicionando" exceeds WhatsApp's 20-char limit
 
 **Hypothesis / Question:** Can we use "Continuar adicionando" as the button label for the accumulation mode continuation button?

@@ -102,7 +102,6 @@ describe('handleOnboardingListings — parse phase (first message)', () => {
       '5511999999999',
       expect.stringContaining('BRA5'),
       expect.arrayContaining([
-        expect.objectContaining({ id: 'continue_adding' }),
         expect.objectContaining({ id: 'confirm_listings' }),
         expect.objectContaining({ id: 'correct_listings' }),
       ])
@@ -185,16 +184,15 @@ describe('handleOnboardingListings — accumulation mode', () => {
     );
   });
 
-  it('[Adicionar mais] sends acknowledgment text and does not call transitionState', async () => {
-    const user = makeUser(['BRA5']);
+  it('treats unrecognized button id as text input and re-prompts when no accumulated codes', async () => {
+    const user = makeUser();
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
     const result = await handleOnboardingListings(user, makeButtonPayload('continue_adding'));
 
     expect(result.isOk()).toBe(true);
-    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Continue'));
-    expect(db.transitionState).not.toHaveBeenCalled();
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
+    expect(db.transitionState).not.toHaveBeenCalled();
   });
 });
 
