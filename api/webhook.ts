@@ -40,6 +40,19 @@ export default async function handler(
 
   const payload = parsed.data;
 
+  // TODO(diagnose-button-loop): remover após confirmar formato do payload do Z-API.
+  logger.info({
+    event: 'webhook_payload_diagnose',
+    phone: payload.phone.slice(0, 4) + '****' + payload.phone.slice(-2),
+    hasText: Boolean(payload.text),
+    textMessage: payload.text?.message?.slice(0, 50),
+    hasButtonsResponse: Boolean(payload.buttonsResponseMessage),
+    buttonsResponseKeys: payload.buttonsResponseMessage
+      ? Object.keys(payload.buttonsResponseMessage)
+      : [],
+    rawBody: JSON.stringify(req.body).slice(0, 800),
+  });
+
   if (payload.phone.includes('@g.us')) {
     res.status(200).json({ ok: true });
     return;
