@@ -53,6 +53,17 @@ function makeButtonPayload(buttonId: string): WebhookPayload {
   };
 }
 
+function makeDisplayButtonPayload(label: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback',
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: { selectedDisplayText: label },
+  };
+}
+
 function makeTextPayload(text: string): WebhookPayload {
   return {
     type: 'ReceivedCallback',
@@ -102,6 +113,18 @@ describe('handleConfirmingInventory — [Sim, ainda tenho]', () => {
 
     expect(result.isOk()).toBe(true);
     expect(listingsService.bumpListingsExpiry).toHaveBeenCalled();
+  });
+
+  it('bumps expiry on selectedDisplayText "Sim, ainda tenho"', async () => {
+    const user = makeUser();
+    vi.mocked(listingsService.bumpListingsExpiry).mockResolvedValue(ok(undefined));
+    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleConfirmingInventory(user, makeDisplayButtonPayload('Sim, ainda tenho'), user.phone);
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.bumpListingsExpiry).toHaveBeenCalledWith(user.id, 'sticker');
   });
 
   it('propagates error when bumpListingsExpiry fails', async () => {
@@ -215,6 +238,19 @@ describe('handleConfirmingInventory — [Não tenho mais] — confirmation step'
     expect(listingsService.clearUserListings).not.toHaveBeenCalled();
     expect(zapi.sendText).toHaveBeenCalledWith(user.phone, expect.stringContaining('mantidas'));
     expect(idle.showMainMenu).toHaveBeenCalledWith(user.id, user.phone);
+  });
+
+  it('clears listings on selectedDisplayText "Confirmar" in pending_clear phase', async () => {
+    const user = makeUser({ pending_clear: true });
+    vi.mocked(listingsService.clearUserListings).mockResolvedValue(ok(undefined));
+    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleConfirmingInventory(user, makeDisplayButtonPayload('Confirmar'), user.phone);
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.clearUserListings).toHaveBeenCalledWith(user.id, 'sticker');
   });
 
   it('propagates error when clearUserListings fails during confirmation', async () => {

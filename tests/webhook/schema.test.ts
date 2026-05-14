@@ -47,6 +47,7 @@ describe('webhookPayloadSchema', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.buttonsResponseMessage?.selectedButtonId).toBeUndefined();
+      expect(result.data.buttonsResponseMessage?.selectedDisplayText).toBe('Alterar');
     }
   });
 
@@ -54,11 +55,13 @@ describe('webhookPayloadSchema', () => {
     const result = webhookPayloadSchema.safeParse({
       ...BASE,
       messageId: 'msg-4',
-      buttonsResponseMessage: { selectedButtonId: null },
+      buttonsResponseMessage: { selectedButtonId: null, selectedDisplayText: 'Confirmar' },
     });
-    // With .optional(), null is not a valid string — Zod would fail. Use the raw body log to diagnose.
-    // If Z-API sends null, we need .nullable() — this test documents current behavior.
-    expect(typeof result.success).toBe('boolean');
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.buttonsResponseMessage?.selectedButtonId).toBeNull();
+      expect(result.data.buttonsResponseMessage?.selectedDisplayText).toBe('Confirmar');
+    }
   });
 
   it('parses a button response with extra unknown fields (passthrough)', () => {
@@ -87,6 +90,18 @@ describe('webhookPayloadSchema', () => {
     expect(result.success).toBe(true);
     if (result.success) {
       expect(result.data.listResponseMessage?.selectedRowId).toBe('discovery');
+    }
+  });
+
+  it('parses a list response message with selectedRowId null', () => {
+    const result = webhookPayloadSchema.safeParse({
+      ...BASE,
+      messageId: 'msg-6b',
+      listResponseMessage: { selectedRowId: null },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.listResponseMessage?.selectedRowId).toBeNull();
     }
   });
 

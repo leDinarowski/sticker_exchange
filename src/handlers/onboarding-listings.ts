@@ -17,6 +17,11 @@ const RE_PROMPT =
 const WANTS_PROMPT =
   'Quais figurinhas você busca? Envie os códigos. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
 
+const BUTTON_LABELS = {
+  Confirmar: 'confirm_listings',
+  Corrigir: 'correct_listings',
+};
+
 export async function handleOnboardingListings(
   user: User,
   payload: WebhookPayload
@@ -26,7 +31,7 @@ export async function handleOnboardingListings(
   const pendingOp = ctx.pending_op ?? 'set';
   const collectingWants = ctx.collecting_wants === true;
   const rePrompt = collectingWants ? WANTS_PROMPT : RE_PROMPT;
-  const buttonId = resolveButtonId(payload);
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS);
   const textInput = payload.text?.message?.trim() ?? '';
 
   // ── [Confirmar]: save accumulated list ────────────────────────────────────

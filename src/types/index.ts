@@ -108,7 +108,10 @@ export interface ZApiWebhookPayload {
   messageId?: string;
   fromMe: boolean;
   text?: { message: string };
-  buttonsResponseMessage?: { selectedButtonId: string };
-  listResponseMessage?: { selectedRowId: string };
+  buttonsResponseMessage?: {
+    selectedButtonId?: string | null;
+    selectedDisplayText?: string | null;
+  };
+  listResponseMessage?: { selectedRowId?: string | null };
   location?: { latitude: number; longitude: number };
 }

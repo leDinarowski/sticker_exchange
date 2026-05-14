@@ -19,12 +19,18 @@ const TEXT_TO_RADIUS_ID: Record<string, string> = {
   '3': 'r5',
 };
 
+const BUTTON_LABELS = {
+  '1 km': 'r1',
+  '3 km': 'r3',
+  '5 km': 'r5',
+};
+
 export async function handleOnboardingRadius(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
   const textInput = payload.text?.message?.trim() ?? '';
-  const buttonId = resolveButtonId(payload) || TEXT_TO_RADIUS_ID[textInput] || '';
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS) || TEXT_TO_RADIUS_ID[textInput] || '';
   const radiusKm = RADIUS_MAP[buttonId];
 
   if (radiusKm === undefined) {

@@ -83,6 +83,17 @@ function makeButtonPayload(buttonId: string): WebhookPayload {
   };
 }
 
+function makeDisplayButtonPayload(label: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback',
+    phone: '5522222222222',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: { selectedDisplayText: label },
+  };
+}
+
 function makeTextPayload(text: string): WebhookPayload {
   return {
     type: 'ReceivedCallback',
@@ -160,6 +171,34 @@ describe('handleAwaitingMatchResponse — respondent accepts (text fallback "1")
     const result = await handleAwaitingMatchResponse(
       userB,
       makeTextPayload('1'),
+      userB.phone
+    );
+
+    expect(result.isOk()).toBe(true);
+    expect(zapi.createGroup).toHaveBeenCalled();
+    expect(matchesDb.updateMatchStatus).toHaveBeenCalledWith(MATCH_ID, MatchStatus.CONNECTED);
+  });
+});
+
+describe('handleAwaitingMatchResponse — respondent accepts (display text fallback)', () => {
+  it('accepts via selectedDisplayText "Sim" when Z-API omits selectedButtonId', async () => {
+    const userB = makeUser(USER_B_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {
+      pending_match_id: MATCH_ID,
+      pending_target_name: 'Alice',
+    });
+    const userA = makeUser(USER_A_ID, ConversationStep.AWAITING_MATCH_RESPONSE, {});
+
+    vi.mocked(matchesDb.getMatchById).mockResolvedValue(ok(makePendingMatch()));
+    vi.mocked(matchesDb.updateMatchStatus).mockResolvedValue(ok(undefined));
+    vi.mocked(usersDb.findUserById).mockResolvedValue(ok(userA));
+    vi.mocked(zapi.createGroup).mockResolvedValue(ok('groupid@g.us'));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+    vi.mocked(usersDb.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idleHandler.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleAwaitingMatchResponse(
+      userB,
+      makeDisplayButtonPayload('Sim'),
       userB.phone
     );
 

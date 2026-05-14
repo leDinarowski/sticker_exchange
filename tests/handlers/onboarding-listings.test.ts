@@ -97,6 +97,17 @@ function makeListResponsePayload(rowId: string): WebhookPayload {
   };
 }
 
+function makeDisplayButtonPayload(label: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback',
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: { selectedDisplayText: label },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingListings — parse phase (first message)', () => {
@@ -257,6 +268,23 @@ describe('handleOnboardingListings — confirmation phase', () => {
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.IDLE);
   });
 
+  it('saves accumulated_codes on selectedDisplayText "Confirmar" when Z-API omits selectedButtonId', async () => {
+    const user = makeUser(['BRA5', 'ARG3']);
+    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeDisplayButtonPayload('Confirmar'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).toHaveBeenCalledWith(
+      'uuid-1',
+      'sticker',
+      { op: 'set', codes: ['BRA5', 'ARG3'] }
+    );
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.IDLE);
+  });
+
   it('re-prompts with rePrompt when [Confirmar] tapped but accumulated is empty', async () => {
     const user = makeUser();
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
@@ -291,6 +319,18 @@ describe('handleOnboardingListings — confirmation phase', () => {
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
     const result = await handleOnboardingListings(user, makeTextPayload('2'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_LISTINGS, {});
+  });
+
+  it('clears accumulated on selectedDisplayText "Corrigir" when Z-API omits selectedButtonId', async () => {
+    const user = makeUser(['BRA5', 'ARG3']);
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeDisplayButtonPayload('Corrigir'));
 
     expect(result.isOk()).toBe(true);
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();

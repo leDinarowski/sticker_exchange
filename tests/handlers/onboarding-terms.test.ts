@@ -62,6 +62,17 @@ function makeListResponsePayload(rowId: string): WebhookPayload {
   };
 }
 
+function makeDisplayButtonPayload(label: string, selectedButtonId?: string | null): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: { selectedButtonId, selectedDisplayText: label },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingTerms', () => {
@@ -155,6 +166,27 @@ describe('handleOnboardingTerms', () => {
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
     const result = await handleOnboardingTerms(mockUser, makeListResponsePayload('terms_refuse'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.recordRefusal).toHaveBeenCalledWith('uuid-1');
+  });
+
+  it('records consent via selectedDisplayText "Aceito" when Z-API omits selectedButtonId', async () => {
+    vi.mocked(db.recordConsent).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingTerms(mockUser, makeDisplayButtonPayload('Aceito'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.recordConsent).toHaveBeenCalledWith('uuid-1');
+  });
+
+  it('records refusal via selectedDisplayText "Recuso" when selectedButtonId is null', async () => {
+    vi.mocked(db.recordRefusal).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingTerms(mockUser, makeDisplayButtonPayload('Recuso', null));
 
     expect(result.isOk()).toBe(true);
     expect(db.recordRefusal).toHaveBeenCalledWith('uuid-1');

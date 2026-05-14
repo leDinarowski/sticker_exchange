@@ -7,8 +7,11 @@ export const webhookPayloadSchema = z.object({
   messageId: z.string().optional(),
   fromMe: z.boolean(),
   text: z.object({ message: z.string() }).optional(),
-  buttonsResponseMessage: z.object({ selectedButtonId: z.string().optional() }).passthrough().optional(),
-  listResponseMessage: z.object({ selectedRowId: z.string() }).optional(),
+  buttonsResponseMessage: z.object({
+    selectedButtonId: z.string().nullable().optional(),
+    selectedDisplayText: z.string().nullable().optional(),
+  }).passthrough().optional(),
+  listResponseMessage: z.object({ selectedRowId: z.string().nullable().optional() }).passthrough().optional(),
   location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
 });
 
