@@ -228,13 +228,31 @@
 - [x] Remover comentários TEMP de `src/services/zapi.ts`
 - [x] Adicionar ADR-027 documentando o upgrade e remoção do text fallback
 
-**US-10.10 — Corrigir devolve lista atual para usuário editar (sem redigitar do zero)**
-- [ ] `src/handlers/onboarding-listings.ts`: importar `compactCodes` de `../utils/listing-parser.js`
-- [ ] No branch `correct_listings`, se `accumulated.length > 0`: enviar `compactCodes(accumulated)` como `sendText` (msg 1, sem prefixo, copiável) + instrução "Copie a lista acima, edite e me envie a versão corrigida. Vou substituir tudo pela nova lista." (msg 2)
-- [ ] Manter comportamento atual (`sendText(rePrompt)`) quando `accumulated.length === 0`
-- [ ] Preservar `collecting_wants` ao zerar `accumulated_codes`
-- [ ] Atualizar testes em `tests/handlers/onboarding-listings.test.ts`: cenário [Corrigir] com lista populada agora envia duas `sendText` (lista + instrução); cenário com lista vazia continua enviando RE_PROMPT
-- [ ] Teste manual via Z-API: enviar `BRA3, BRA5`, clicar Corrigir, copiar a lista, editar e enviar → confirmar substituição
+**US-10.10 — Corrigir devolve lista atual para usuário editar (sem redigitar do zero)** [DONE — 2026-05-14]
+- [x] `src/handlers/onboarding-listings.ts`: importar `compactCodes` de `../utils/listing-parser.js`
+- [x] No branch `correct_listings`, se `accumulated.length > 0`: enviar `compactCodes(accumulated)` como `sendText` (msg 1, sem prefixo, copiável) + instrução "Copie a lista acima, edite e me envie a versão corrigida. Vou substituir tudo pela nova lista." (msg 2)
+- [x] Manter comportamento atual (`sendText(rePrompt)`) quando `accumulated.length === 0`
+- [x] Preservar `collecting_wants` ao zerar `accumulated_codes`
+- [x] Atualizar testes em `tests/handlers/onboarding-listings.test.ts`: cenário [Corrigir] com lista populada agora envia duas `sendText` (lista + instrução); cenário com lista vazia continua enviando RE_PROMPT
+- [x] Teste manual via Z-API: enviar `BRA3, BRA5`, clicar Corrigir, copiar a lista, editar e enviar → confirmar substituição
 
-**US-10.11 — Debounce ao acumular códigos (PR-B, ainda não iniciado)**
-- [ ] Ver plano em `~/.claude/plans/superado-o-problema-com-floating-aurora.md` (Ponto 1)
+**US-10.11 — Debounce ao acumular códigos via `waitUntil` (Fluid Compute)** [DONE — 2026-05-14]
+
+Plano completo: `~/.claude/plans/superado-o-problema-com-floating-aurora.md` (Ponto 1).
+
+Objetivo: ao receber várias mensagens de texto em sequência rápida no estado `ONBOARDING_LISTINGS`, agrupar e enviar **um único eco** após uma janela de silêncio (~3.5s), em vez de um eco por mensagem.
+
+- [x] `src/types/index.ts`: adicionar `last_seq?: number` em `ConversationStateContext` e tipo nomeado `PendingOp`
+- [x] `src/utils/debounce.ts` (novo): helper `runTrailingEcho({ userId, phone, seq, delayMs, buildEchoText })` com injeção de `sleep`, `loadUser`, `send` para testabilidade
+- [x] `src/utils/debounce.ts`: recarrega usuário e valida (a) `ctx.last_seq === seq` e (b) `step === ONBOARDING_LISTINGS`; aborta nos demais casos
+- [x] `src/utils/debounce.ts`: emite telemetria `listings_echo_sent` / `listings_echo_suppressed_by_seq` / `listings_echo_suppressed_by_state` / `listings_echo_load_failed` / `listings_echo_send_failed`
+- [x] `src/handlers/onboarding-listings.ts`: no branch "Text input", gera `seq = Date.now()`, salva `last_seq` no contexto, e dispara o trailing echo via `waitUntil` quando `DEBOUNCE_ENABLED=true`
+- [x] `src/handlers/onboarding-listings.ts`: extrai `buildEchoText(accumulated, op, collectingWants)` — usada tanto no envio síncrono (flag off) quanto no trailing echo
+- [x] Feature flag `DEBOUNCE_ENABLED` via `process.env`: default `false`; quando off, comportamento atual preservado integralmente
+- [x] `package.json`: adicionar `@vercel/functions` (não vem por padrão com `@vercel/node ^5`); `.env.example` documenta `DEBOUNCE_ENABLED`
+- [x] Testes (`tests/utils/debounce.test.ts` — 8 testes): seq matches → echo enviado; seq mismatch → suprimido por seq; estado mudou → suprimido por state; loadUser falha → swallow; user null → swallow; send falha → swallow; op:add/wants formatação correta
+- [x] Testes (`tests/handlers/onboarding-listings.test.ts` — 5 testes novos): com flag on, salva `last_seq` e NÃO envia `sendButtons` síncrono; waitUntil recebe Promise; transitionState falha não chama waitUntil; preserva `collecting_wants`; Confirmar continua síncrono
+- [x] ADR-028 em `decisions.md`: documentar escolha de `waitUntil` + last_seq vs Vercel Queues vs pg_cron, com trade-offs e degradação aceita
+- [x] Entrada em `learnings.md` (2026-05-14): `waitUntil` é o caminho oficial e supera a regra anterior de "no background async after res.end()"
+- [ ] Teste manual via Z-API (após merge, com flag desligada): comportamento atual preservado
+- [ ] Teste manual via Z-API (após ativar flag): enviar `BRA3`, `BRA5`, `ARG7` em <3s → 1 eco; pausa de 5s → 2 ecos; clicar Confirmar antes do eco → sem eco fantasma

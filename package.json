@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.49.0",
+    "@vercel/functions": "^3.5.1",
     "h3-js": "^4.1.0",
     "neverthrow": "^8.2.0",
     "pino": "^9.6.0",

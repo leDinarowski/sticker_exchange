@@ -1,13 +1,20 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { ok, err } from 'neverthrow';
 
 vi.mock('../../src/db/users.js', () => ({
   transitionState: vi.fn(),
+  findUserById: vi.fn(),
 }));
 vi.mock('../../src/services/zapi.js', () => ({
   sendText: vi.fn(),
   sendButtons: vi.fn(),
   sendList: vi.fn(),
+}));
+const waitUntilMock = vi.fn();
+vi.mock('@vercel/functions', () => ({
+  waitUntil: (p: Promise<unknown>): void => {
+    waitUntilMock(p);
+  },
 }));
 vi.mock('../../src/services/listings.js', () => ({
   applyListingUpdate: vi.fn(),
@@ -131,7 +138,7 @@ describe('handleOnboardingListings — parse phase (first message)', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'set' }
+      expect.objectContaining({ accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'set' })
     );
   });
 
@@ -172,7 +179,7 @@ describe('handleOnboardingListings — accumulation mode', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'set' }
+      expect.objectContaining({ accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'set' })
     );
   });
 
@@ -187,7 +194,7 @@ describe('handleOnboardingListings — accumulation mode', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5'], pending_op: 'set' }
+      expect.objectContaining({ accumulated_codes: ['BRA5'], pending_op: 'set' })
     );
   });
 
@@ -202,7 +209,7 @@ describe('handleOnboardingListings — accumulation mode', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'add' }
+      expect.objectContaining({ accumulated_codes: ['BRA5', 'ARG3'], pending_op: 'add' })
     );
   });
 
@@ -365,7 +372,7 @@ describe('handleOnboardingListings — differential update (add/remove)', () => 
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5'], pending_op: 'add' }
+      expect.objectContaining({ accumulated_codes: ['BRA5'], pending_op: 'add' })
     );
   });
 
@@ -379,7 +386,7 @@ describe('handleOnboardingListings — differential update (add/remove)', () => 
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { accumulated_codes: ['BRA5'], pending_op: 'remove' }
+      expect.objectContaining({ accumulated_codes: ['BRA5'], pending_op: 'remove' })
     );
   });
 
@@ -447,7 +454,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { collecting_wants: true, accumulated_codes: ['BRA5', 'ARG3'] }
+      expect.objectContaining({ collecting_wants: true, accumulated_codes: ['BRA5', 'ARG3'] })
     );
     expect(listingsService.applyListingUpdate).not.toHaveBeenCalled();
   });
@@ -462,7 +469,7 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(db.transitionState).toHaveBeenCalledWith(
       'uuid-1',
       ConversationStep.ONBOARDING_LISTINGS,
-      { collecting_wants: true, accumulated_codes: ['BRA5', 'ARG3'] }
+      expect.objectContaining({ collecting_wants: true, accumulated_codes: ['BRA5', 'ARG3'] })
     );
   });
 
@@ -530,5 +537,87 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
       {}
     );
     expect(zapi.sendText).toHaveBeenNthCalledWith(1, '5511999999999', 'BRA5');
+  });
+});
+
+describe('handleOnboardingListings — debounce-enabled mode (DEBOUNCE_ENABLED=true)', () => {
+  beforeEach(() => {
+    waitUntilMock.mockReset();
+    process.env['DEBOUNCE_ENABLED'] = 'true';
+  });
+
+  afterEach(() => {
+    delete process.env['DEBOUNCE_ENABLED'];
+  });
+
+  it('persists last_seq in context and does NOT call sendButtons synchronously', async () => {
+    const user = makeUser();
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeTextPayload('BRA5, ARG3'));
+
+    expect(result.isOk()).toBe(true);
+    expect(zapi.sendButtons).not.toHaveBeenCalled();
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      expect.objectContaining({
+        accumulated_codes: ['BRA5', 'ARG3'],
+        pending_op: 'set',
+        last_seq: expect.any(Number),
+      })
+    );
+    expect(waitUntilMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('schedules the trailing echo (waitUntil receives a promise) on each text message', async () => {
+    const user = makeUser(['BRA5']);
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    await handleOnboardingListings(user, makeTextPayload('ARG3'));
+
+    expect(waitUntilMock).toHaveBeenCalledTimes(1);
+    expect(waitUntilMock.mock.calls[0]![0]).toBeInstanceOf(Promise);
+  });
+
+  it('does not call waitUntil when transitionState fails', async () => {
+    const user = makeUser();
+    vi.mocked(db.transitionState).mockResolvedValue(err(new Error('db error')));
+
+    const result = await handleOnboardingListings(user, makeTextPayload('BRA5'));
+
+    expect(result.isErr()).toBe(true);
+    expect(waitUntilMock).not.toHaveBeenCalled();
+  });
+
+  it('preserves collecting_wants when debounce is enabled', async () => {
+    const user = makeUser(undefined, { collecting_wants: true });
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    await handleOnboardingListings(user, makeTextPayload('BRA5'));
+
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      expect.objectContaining({
+        collecting_wants: true,
+        accumulated_codes: ['BRA5'],
+        last_seq: expect.any(Number),
+      })
+    );
+    expect(waitUntilMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('still routes Confirmar synchronously regardless of debounce flag', async () => {
+    const user = makeUser(['BRA5', 'ARG3']);
+    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeButtonPayload('confirm_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).toHaveBeenCalled();
+    expect(waitUntilMock).not.toHaveBeenCalled();
   });
 });

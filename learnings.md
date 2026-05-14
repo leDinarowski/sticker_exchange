@@ -347,3 +347,25 @@ See ADR-027 for updated consequences.
 **Impact:** Every message in the group produces an unwanted onboarding reply, making the group unusable for its intended purpose.
 
 **Action:** Detect group JIDs in the webhook handler (`api/webhook.ts`) before calling `findUser`, and return 200 silently. Group JID format in Z-API differs from individual JIDs (confirmed by inspection of the raw payload). See US-10.3.
+
+---
+
+## 2026-05-14 — `waitUntil` from `@vercel/functions` IS supported, despite earlier "no background work" learning
+
+**Hypothesis / Question:** The 2026-04-25 learning says "never use fire-and-forget async after `res.end()`". Does that absolute rule still apply when building a debounce that needs to send a message after the webhook returns 200?
+
+**Observation:** The earlier rule applies to **naked Promises** (e.g. `void someAsyncFn()` after `res.end()`) — those are terminated when the function returns. But Vercel's Fluid Compute runtime provides a first-party primitive specifically for this: `waitUntil(promise)` from `@vercel/functions`. The runtime tracks the promise and keeps the function instance alive until it resolves (or the Fluid Compute soft limit is hit). This is the documented, supported way to do trailing work after the response.
+
+Key distinction:
+- ❌ `void doWork()` after `res.end()` → terminated, work lost (old learning)
+- ✅ `waitUntil(doWork())` → instance stays alive until promise resolves
+
+Fluid Compute additionally reuses instances across concurrent requests, so multiple back-to-back messages within the debounce window share a single warm instance rather than spawning new cold starts.
+
+**Impact:** Enabled the US-10.11 listings-input debounce: each text message persists a `last_seq` token, then `waitUntil(runTrailingEcho(...))` sleeps `DEBOUNCE_MS` and only sends an echo if the token is still current. Without `waitUntil`, this pattern would require Vercel Queues or a pg_cron loop, both heavier infra.
+
+**Action:**
+- Added `@vercel/functions` as a dependency (small, official).
+- Documented the trade-offs and guards in ADR-028.
+- Behaviour is gated by `DEBOUNCE_ENABLED` env var so production can validate the path with the flag off, then flip it on.
+- Rule update: "don't fire-and-forget after res.end()" remains true for naked Promises. For intentional trailing work, use `waitUntil` from `@vercel/functions` and accept the rare-degradation case (function evicted before timer fires).

@@ -24,12 +24,14 @@ export interface DiscoveryEntry {
   dist_m: number;
 }
 
+export type PendingOp = 'set' | 'add' | 'remove';
+
 export interface ConversationStateContext {
   mode?: 'discovery' | 'bilateral';
   discovery_list?: DiscoveryEntry[];
   selected_indices?: number[];
   accumulated_codes?: string[];
-  pending_op?: 'set' | 'add' | 'remove';
+  pending_op?: PendingOp;
   pending_match_id?: string;
   pending_match_ids?: string[];
   pending_target_name?: string;
@@ -40,6 +42,9 @@ export interface ConversationStateContext {
   pending_name?: string;
   watch_mode?: 'discovery' | 'bilateral';
   watch_attempts?: number;
+  // Monotonic token (ms epoch) used by the listings debounce helper to detect
+  // whether a scheduled trailing echo is still the latest one. See ADR-028.
+  last_seq?: number;
 }
 
 export interface ConversationStatePayload {
