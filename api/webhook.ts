@@ -28,7 +28,11 @@ export default async function handler(
 
   const parsed = webhookPayloadSchema.safeParse(req.body);
   if (!parsed.success) {
-    logger.warn({ event: 'webhook_parse_failed', issues: parsed.error.issues.length });
+    logger.warn({
+      event: 'webhook_parse_failed',
+      issues: parsed.error.issues.length,
+      paths: parsed.error.issues.map((i) => i.path.join('.')),
+    });
     res.status(200).json({ ok: true });
     return;
   }

@@ -105,7 +105,7 @@ export interface ZApiWebhookPayload {
   type: string;
   phone: string;
   instanceId: string;
-  messageId: string;
+  messageId?: string;
   fromMe: boolean;
   text?: { message: string };
   buttonsResponseMessage?: { selectedButtonId: string };

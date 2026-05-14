@@ -4,7 +4,7 @@ export const webhookPayloadSchema = z.object({
   type: z.literal('ReceivedCallback'),
   phone: z.string(),
   instanceId: z.string(),
-  messageId: z.string(),
+  messageId: z.string().optional(),
   fromMe: z.boolean(),
   text: z.object({ message: z.string() }).optional(),
   buttonsResponseMessage: z.object({ selectedButtonId: z.string() }).optional(),
