@@ -684,3 +684,34 @@ Implementation: a new migration that updates the H3-snap function to use the new
 - Update the H3 resolution constant in `src/utils/h3.ts` (or equivalent) to match the chosen resolution.
 - Tests that assert specific H3 cell assignments must be updated to use the new resolution.
 
+---
+
+## ADR-027: Z-API Native Button and List Messages (Account Upgrade)
+
+**Status:** Accepted
+**Date:** 2026-05-14
+
+### Context
+During Phase 1 development, the Z-API trial account did not support native button or list messages.
+`sendButtons` and `sendList` in `src/services/zapi.ts` fell back to numbered plain text ("1 - Label\n2 - Label\nResponda com o numero."). All handlers were written to handle both `buttonsResponseMessage.selectedButtonId` (native) and `textInput === '1'` (text fallback) to cover both modes.
+
+A side effect of the text fallback: when "Adicionar mais" was added as the first button in the
+accumulation flow (`onboarding-listings.ts`), it shifted "Confirmar" to position 2 — but the
+fallback mapping still had `textInput === '1'` → confirm. Users typing "2" to confirm were
+instead triggering Corrigir (clear). The bug was masked in tests because tests used `buttonId`.
+
+### Decision
+1. Enable real Z-API native buttons via `send-button-actions` (endpoint) with `buttonActions` array where each button has `type: 'REPLY'`.
+2. Enable real Z-API option lists via `send-option-list` (endpoint) with `optionList` wrapping a flat `options` array (sections are flattened on our side for compatibility with the existing `ListSection[]` API).
+3. Remove the "Adicionar mais" button from the accumulation flow — users type more codes without needing to tap a button, making the option redundant and the text fallback simpler (2 buttons = '1' and '2' are unambiguous).
+4. Text fallback (`textInput === '1'`) is kept in all handlers as a defensive backup for unexpected plain-text responses.
+
+### Rationale
+- Native buttons are better UX: interactive elements vs. typing numbers.
+- Removing the redundant third button eliminates the text fallback ambiguity permanently.
+- The `send-button-actions` and `send-option-list` endpoints are the standard Z-API paths for paid accounts (confirmed via developer.z-api.io).
+- No handler changes needed — all button routing already uses `buttonId` checks.
+
+### Consequences
+- If Z-API's button toggle is disabled in the panel, `send-button-actions` will return a non-200 and the function returns an `Err`. Verify toggle is active before deploying.
+

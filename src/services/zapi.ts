@@ -79,16 +79,17 @@ export async function sendText(
   return zapiPost('send-text', { phone, message });
 }
 
-// TEMP: button messages require Z-API beta toggle (unavailable on trial).
-// Renders as numbered text until the toggle is enabled; revert when ready.
 export async function sendButtons(
   phone: string,
   message: string,
   buttons: ButtonOption[]
 ): Promise<Result<void, Error>> {
   logger.info({ event: 'zapi_send', type: 'buttons', count: buttons.length });
-  const options = buttons.map((b, i) => `${i + 1} - ${b.label}`).join('\n');
-  return sendText(phone, `${message}\n\n${options}\n\nResponda com o numero.`);
+  return zapiPost('send-button-actions', {
+    phone,
+    message,
+    buttonActions: buttons.map((b) => ({ id: b.id, type: 'REPLY', label: b.label })),
+  });
 }
 
 export async function createGroup(
@@ -109,18 +110,25 @@ export async function createGroup(
   return ok(groupPhone);
 }
 
-// TEMP: list messages require Z-API beta toggle (unavailable on trial).
-// Renders as numbered text until the toggle is enabled; revert when ready.
 export async function sendList(
   phone: string,
   message: string,
-  _buttonLabel: string,
+  buttonLabel: string,
   sections: ListSection[]
 ): Promise<Result<void, Error>> {
   logger.info({ event: 'zapi_send', type: 'list' });
-  const rows = sections.flatMap((s) => s.rows);
-  const options = rows.map((r, i) => `${i + 1} - ${r.title}`).join('\n');
-  return sendText(phone, `${message}\n\n${options}\n\nResponda com o numero.`);
+  const options = sections.flatMap((s) =>
+    s.rows.map((r) => ({ id: r.id, title: r.title, ...(r.description ? { description: r.description } : {}) }))
+  );
+  return zapiPost('send-option-list', {
+    phone,
+    message,
+    optionList: {
+      title: sections[0]?.title ?? '',
+      buttonLabel,
+      options,
+    },
+  });
 }
 
 export async function checkZApiConnectivity(): Promise<Result<void, Error>> {

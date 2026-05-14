@@ -206,3 +206,24 @@
 - [x] [Confirmar]: processar `accumulated_codes` como lista final; [Corrigir]: limpar acumulado, re-perguntar
 - [x] Manter compatibilidade: enviar tudo de uma vez ainda funciona (acumula lista com 1 mensagem e pede confirmação)
 - [x] Testes: 2 mensagens separadas → accumulated_codes contém ambas; duplicata → deduplica; [Confirmar] → salva combinado
+
+**US-10.7 — Copias de texto do onboarding mais amigáveis** [DONE — 2026-05-14]
+- [x] `src/handlers/new.ts:22` — welcome: `'Bem-vindo ao Trocar Figurinhas\nAntes de começarmos...'` → `'Oi! Bem vindo ao Trocar Figurinhas, qual é o seu nome?'`
+- [x] `src/handlers/onboarding-name.ts` — echo-back: `'Nome: ${name}\n\nConfirma?'` → `'Seu nome é ${name}, está certo?'`
+- [x] `src/handlers/onboarding-name.ts` — `RE_PROMPT`: `'Envie seu nome (entre 2 e 50 caracteres).'` → `'Claro, qual é o seu nome?'`
+- [x] Atualizar `tests/handlers/new.test.ts`: welcome check `'Bem-vindo'` → `'Oi!'`
+- [x] Atualizar `tests/handlers/onboarding-name.test.ts`: echo-back text + [Alterar] re-prompt assertion
+
+**US-10.8 — Simplificar UX de acumulação e corrigir mapeamento de botões** [DONE — 2026-05-14]
+- [x] `src/handlers/onboarding-listings.ts`: remover botão `{ id: 'continue_adding', label: 'Adicionar mais' }` do array
+- [x] `src/handlers/onboarding-listings.ts`: remover handler `if (buttonId === 'continue_adding')`
+- [x] `src/handlers/onboarding-listings.ts`: atualizar `echoText` para `'Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:'`
+- [x] Verificar que text fallback '1' = Confirmar e '2' = Corrigir agora coincidem com a ordem dos botões
+- [x] `tests/handlers/onboarding-listings.test.ts`: remover teste do [Adicionar mais], atualizar `arrayContaining` e assertions de texto
+
+**US-10.9 — Habilitar botões nativos WhatsApp via Z-API (conta paga)** [DONE — 2026-05-14]
+- [ ] Verificar no painel Z-API que o toggle de button messages está ativo (manual — antes de fazer deploy)
+- [x] `src/services/zapi.ts`: substituir `sendButtons` text fallback por chamada real ao endpoint `send-button-actions`
+- [x] `src/services/zapi.ts`: substituir `sendList` text fallback por chamada real ao endpoint `send-option-list`
+- [x] Remover comentários TEMP de `src/services/zapi.ts`
+- [x] Adicionar ADR-027 documentando o upgrade e remoção do text fallback

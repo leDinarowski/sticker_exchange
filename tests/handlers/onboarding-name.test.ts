@@ -75,7 +75,7 @@ describe('handleOnboardingName — parse phase', () => {
     expect(db.updateUserName).not.toHaveBeenCalled();
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      'Nome: Maria Silva\n\nConfirma?',
+      'Seu nome é Maria Silva, está certo?',
       expect.arrayContaining([
         expect.objectContaining({ id: 'confirm_name' }),
         expect.objectContaining({ id: 'alter_name' }),
@@ -98,7 +98,7 @@ describe('handleOnboardingName — parse phase', () => {
     expect(db.updateUserName).not.toHaveBeenCalled();
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      'Nome: Ana\n\nConfirma?',
+      'Seu nome é Ana, está certo?',
       expect.any(Array)
     );
     expect(db.transitionState).toHaveBeenCalledWith(
@@ -219,7 +219,7 @@ describe('handleOnboardingName — confirmation phase', () => {
     );
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
-      expect.stringContaining('caracteres')
+      expect.stringContaining('Claro')
     );
   });
 

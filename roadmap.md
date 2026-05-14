@@ -281,10 +281,45 @@ acumulado, e o bot exibe a lista corrente com opções explícitas [Continuar ad
 [Corrigir]. Isso é preferível a um debounce por timer porque (a) serverless não mantém estado
 entre invocações, (b) dá ao usuário controle direto sobre quando a lista está pronta.
 
-**Done when:** Todos os 6 itens acima têm testes passando e foram validados manualmente com
+### US-11.7 — Copias de texto do onboarding mais amigáveis
+
+A mensagem de boas-vindas ("Bem-vindo ao Trocar Figurinhas\nAntes de começarmos, qual é o seu
+nome?"), o echo-back de confirmação de nome ("Nome: NOME\n\nConfirma?") e o re-prompt após
+[Alterar] ("Envie seu nome (entre 2 e 50 caracteres)") soam formais e técnicos para um fluxo
+conversacional.
+
+Mudanças pontuais de cópia: welcome → "Oi! Bem vindo ao Trocar Figurinhas, qual é o seu nome?";
+echo-back → "Seu nome é NOME, está certo?"; re-prompt → "Claro, qual é o seu nome?". Os testes
+de snapshot de texto precisam ser atualizados para refletir as novas strings.
+
+### US-11.8 — Simplificar UX de acumulação e corrigir mapeamento de botões
+
+Durante os testes, ao enviar figurinhas em mensagens separadas e tentar confirmar, a lista era
+apagada em vez de salva. A causa raiz: o botão "Adicionar mais" foi adicionado na posição 0 do
+array, deslocando "Confirmar" para posição 2, mas `textInput === '1'` ainda mapeava para confirm
+e `textInput === '2'` para corrigir. Com text fallback ativo, o usuário vê "2 - Confirmar" na
+tela, digita "2", e o código interpreta como Corrigir — limpando a lista.
+
+A solução é remover o botão "Adicionar mais" (redundante: o usuário já pode digitar mais códigos
+sem apertar nenhum botão) e atualizar o echo-back para deixar claro que continuar digitando é o
+caminho natural. Com 2 botões `[Confirmar, Corrigir]`, o mapeamento text fallback volta a ser
+consistente: '1' = confirmar, '2' = corrigir.
+
+### US-11.9 — Habilitar botões nativos WhatsApp via Z-API (conta paga)
+
+O `sendButtons` e `sendList` em `src/services/zapi.ts` ainda usam um text fallback ("1 - Label\n
+2 - Label\n\nResponda com o numero.") adicionado quando a conta estava no plano trial. Com a
+conta paga, a Z-API suporta botões nativos do WhatsApp — o usuário toca um elemento interativo
+em vez de digitar números, e `buttonsResponseMessage.selectedButtonId` é preenchido no webhook.
+
+Todos os handlers já roteiam por `buttonId` corretamente. A única mudança é substituir a
+implementação de `sendButtons` (endpoint `send-button-actions`) e `sendList` (endpoint
+`send-list-message`) pelo chamado real à API Z-API e remover os comentários TEMP.
+
+**Done when:** Todos os 9 itens acima têm testes passando e foram validados manualmente com
 pelo menos dois números de WhatsApp distintos.
 
-**Estimated effort:** 4–5 dias
+**Estimated effort:** 4–5 dias (US-11.7/11.8/11.9 adicionam ~2 dias ao esforço original)
 
 ---
 
