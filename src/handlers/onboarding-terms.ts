@@ -47,7 +47,7 @@ export async function handleOnboardingTerms(
 
   return sendButtons(
     user.phone,
-    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
+    'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?\n\n1️⃣ Aceito\n2️⃣ Recuso',
     [
       { id: 'terms_accept', label: 'Aceito' },
       { id: 'terms_refuse', label: 'Recuso' },

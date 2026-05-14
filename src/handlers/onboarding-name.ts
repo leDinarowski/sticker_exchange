@@ -38,7 +38,7 @@ export async function handleOnboardingName(
 
       return sendButtons(
         user.phone,
-        'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?',
+        'Seus dados serão usados para encontrar pessoas próximas para troca. Aceita?\n\n1️⃣ Aceito\n2️⃣ Recuso',
         [
           { id: 'terms_accept', label: 'Aceito' },
           { id: 'terms_refuse', label: 'Recuso' },
@@ -83,7 +83,7 @@ export async function handleOnboardingName(
   // Valid name — echo-back
   const sendResult = await sendButtons(
     user.phone,
-    `Seu nome é ${textInput}, está certo?`,
+    `Seu nome é ${textInput}, está certo?\n\n1️⃣ Confirmar\n2️⃣ Alterar`,
     [
       { id: 'confirm_name', label: 'Confirmar' },
       { id: 'alter_name',   label: 'Alterar' },

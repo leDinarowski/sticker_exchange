@@ -36,7 +36,7 @@ export async function handleOnboardingRadius(
   if (radiusKm === undefined) {
     return sendButtons(
       user.phone,
-      'Qual é o seu raio de busca?',
+      'Qual é o seu raio de busca?\n\n1️⃣ 1 km\n2️⃣ 3 km\n3️⃣ 5 km',
       [
         { id: 'r1', label: '1 km' },
         { id: 'r3', label: '3 km' },

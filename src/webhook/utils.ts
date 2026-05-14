@@ -12,15 +12,17 @@ export function resolveButtonId(
   const selectedRowId = payload.listResponseMessage?.selectedRowId;
   if (selectedRowId) return selectedRowId;
 
-  const selectedDisplayText = payload.buttonsResponseMessage?.selectedDisplayText?.trim();
-  if (!selectedDisplayText) return '';
+  const candidate =
+    payload.buttonsResponseMessage?.selectedDisplayText?.trim() ||
+    payload.text?.message?.trim();
+  if (!candidate) return '';
 
-  const exactMatch = labels[selectedDisplayText];
+  const exactMatch = labels[candidate];
   if (exactMatch) return exactMatch;
 
-  const normalizedDisplayText = selectedDisplayText.toLowerCase();
+  const normalized = candidate.toLowerCase();
   const labelMatch = Object.entries(labels).find(
-    ([label]) => label.toLowerCase() === normalizedDisplayText
+    ([label]) => label.toLowerCase() === normalized
   );
   return labelMatch?.[1] ?? '';
 }

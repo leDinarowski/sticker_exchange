@@ -97,7 +97,7 @@ describe('handleOnboardingName — parse phase', () => {
     expect(db.updateUserName).not.toHaveBeenCalled();
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      'Seu nome é Maria Silva, está certo?',
+      expect.stringContaining('Seu nome é Maria Silva, está certo?'),
       expect.arrayContaining([
         expect.objectContaining({ id: 'confirm_name' }),
         expect.objectContaining({ id: 'alter_name' }),
@@ -120,7 +120,7 @@ describe('handleOnboardingName — parse phase', () => {
     expect(db.updateUserName).not.toHaveBeenCalled();
     expect(zapi.sendButtons).toHaveBeenCalledWith(
       '5511999999999',
-      'Seu nome é Ana, está certo?',
+      expect.stringContaining('Seu nome é Ana, está certo?'),
       expect.any(Array)
     );
     expect(db.transitionState).toHaveBeenCalledWith(
@@ -341,5 +341,31 @@ describe('handleOnboardingName — confirmation phase', () => {
     expect(result.isOk()).toBe(true);
     expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Ana');
     expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
+  });
+
+  it('saves name when Z-API forwards the button click as plain text.message "Confirmar"', async () => {
+    vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Cayo' });
+    const result = await handleOnboardingName(user, makePayload('Confirmar'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Cayo');
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
+  });
+
+  it('clears pending_name when Z-API forwards the button click as plain text.message "Alterar"', async () => {
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Cayo' });
+    const result = await handleOnboardingName(user, makePayload('Alterar'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).not.toHaveBeenCalled();
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME, {});
+    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Claro'));
   });
 });
