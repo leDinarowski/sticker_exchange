@@ -187,11 +187,11 @@
 - [DONE — 2026-05-13] Atualizar `src/webhook/schema.ts` se necessário para aceitar campo identificador de grupo
 - [DONE — 2026-05-13] Testes: payload com phone de grupo → `findUser` não é chamado, retorna 200
 
-**US-10.4 — Diagnóstico e seed de pontos de encontro**
-- [ ] Verificar se `meeting_places` tem dados para a área de teste; criar seed SQL se vazia
-- [ ] Em `src/handlers/connection-response.ts:138`: adicionar log `meeting_place_not_found` quando `placeResult.value` é null
-- [ ] Distinguir "lugar não encontrado" (log info) de "query com erro" (log warn) nos logs
-- [ ] Testes: mock `findNearestMeetingPlace` retornando null → log `meeting_place_not_found` emitido
+**US-10.4 — Diagnóstico e seed de pontos de encontro** [DONE — 2026-05-14]
+- [DONE — 2026-05-14] Verificar se `meeting_places` tem dados para a área de teste; criar seed SQL se vazia
+- [DONE — 2026-05-14] Em `src/handlers/connection-response.ts:138`: adicionar log `meeting_place_not_found` quando `placeResult.value` é null
+- [DONE — 2026-05-14] Distinguir "lugar não encontrado" (log info) de "query com erro" (log warn) nos logs
+- [DONE — 2026-05-14] Testes: mock `findNearestMeetingPlace` retornando null → log `meeting_place_not_found` emitido
 
 **US-10.5 — Echo-back de confirmação para nome no onboarding** ✅ 2026-05-13
 - [x] Em `src/handlers/onboarding-name.ts`: ao receber texto válido, armazenar `pending_name` no contexto em vez de salvar diretamente
