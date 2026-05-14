@@ -85,10 +85,10 @@ export async function sendButtons(
   buttons: ButtonOption[]
 ): Promise<Result<void, Error>> {
   logger.info({ event: 'zapi_send', type: 'buttons', count: buttons.length });
-  return zapiPost('send-button-actions', {
+  return zapiPost('send-button-list', {
     phone,
     message,
-    buttonActions: buttons.map((b) => ({ id: b.id, type: 'REPLY', label: b.label })),
+    buttonList: { buttons: buttons.map((b) => ({ id: b.id, label: b.label })) },
   });
 }
 
