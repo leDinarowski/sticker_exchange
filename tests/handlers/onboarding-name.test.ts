@@ -73,14 +73,14 @@ function makeListResponsePayload(rowId: string): WebhookPayload {
   };
 }
 
-function makeButtonPayloadWithoutId(): WebhookPayload {
+function makeDisplayButtonPayload(label: string, selectedButtonId?: string | null): WebhookPayload {
   return {
     type: 'ReceivedCallback' as const,
     phone: '5511999999999',
     instanceId: 'inst',
     messageId: 'msg-1',
     fromMe: false,
-    buttonsResponseMessage: {},
+    buttonsResponseMessage: { selectedButtonId, selectedDisplayText: label },
   };
 }
 
@@ -304,14 +304,42 @@ describe('handleOnboardingName — confirmation phase', () => {
     expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Claro'));
   });
 
-  it('re-prompts when buttonsResponseMessage has no selectedButtonId (Z-API parse fallback)', async () => {
-    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+  it('saves name on selectedDisplayText "Confirmar" when Z-API omits selectedButtonId', async () => {
+    vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
 
     const user = makeUser(undefined, { pending_name: 'Maria' });
-    const result = await handleOnboardingName(user, makeButtonPayloadWithoutId());
+    const result = await handleOnboardingName(user, makeDisplayButtonPayload('Confirmar'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Maria');
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
+  });
+
+  it('clears pending_name on selectedDisplayText "Alterar" when Z-API omits selectedButtonId', async () => {
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Maria' });
+    const result = await handleOnboardingName(user, makeDisplayButtonPayload('Alterar'));
 
     expect(result.isOk()).toBe(true);
     expect(db.updateUserName).not.toHaveBeenCalled();
-    expect(zapi.sendText).toHaveBeenCalled();
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME, {});
+    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Claro'));
+  });
+
+  it('saves name when selectedButtonId is null and selectedDisplayText is "Confirmar"', async () => {
+    vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Ana' });
+    const result = await handleOnboardingName(user, makeDisplayButtonPayload('Confirmar', null));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Ana');
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
   });
 });

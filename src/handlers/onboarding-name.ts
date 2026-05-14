@@ -8,6 +8,10 @@ import { resolveButtonId } from '../webhook/utils.js';
 
 const MAX_RETRIES = 3;
 const RE_PROMPT = 'Claro, qual é o seu nome?';
+const BUTTON_LABELS = {
+  Confirmar: 'confirm_name',
+  Alterar: 'alter_name',
+};
 
 export async function handleOnboardingName(
   user: User,
@@ -15,7 +19,7 @@ export async function handleOnboardingName(
 ): Promise<Result<void, Error>> {
   const ctx = user.conversation_state?.context ?? {};
   const pendingName = ctx.pending_name;
-  const buttonId = resolveButtonId(payload);
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS);
   const textInput = payload.text?.message?.trim() ?? '';
 
   // ── Confirmation phase ────────────────────────────────────────────────────

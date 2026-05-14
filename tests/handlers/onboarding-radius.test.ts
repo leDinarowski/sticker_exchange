@@ -54,6 +54,17 @@ function makeTextPayload(text: string): WebhookPayload {
   };
 }
 
+function makeDisplayButtonPayload(label: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: { selectedDisplayText: label },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingRadius', () => {
@@ -97,6 +108,21 @@ describe('handleOnboardingRadius', () => {
     vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
 
     const result = await handleOnboardingRadius(mockUser, makeTextPayload(text));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserRadius).toHaveBeenCalledWith('uuid-1', expectedKm);
+  });
+
+  it.each([
+    ['1 km', 1],
+    ['3 km', 3],
+    ['5 km', 5],
+  ])('saves radius from selectedDisplayText "%s" when Z-API omits selectedButtonId', async (label, expectedKm) => {
+    vi.mocked(db.updateUserRadius).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingRadius(mockUser, makeDisplayButtonPayload(label));
 
     expect(result.isOk()).toBe(true);
     expect(db.updateUserRadius).toHaveBeenCalledWith('uuid-1', expectedKm);

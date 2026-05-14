@@ -6,11 +6,16 @@ import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
 import { resolveButtonId } from '../webhook/utils.js';
 
+const BUTTON_LABELS = {
+  Aceito: 'terms_accept',
+  Recuso: 'terms_refuse',
+};
+
 export async function handleOnboardingTerms(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const buttonId = resolveButtonId(payload);
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS);
   const textInput = payload.text?.message?.trim().toLowerCase() ?? '';
 
   const isAccept = buttonId === 'terms_accept' || textInput === '1' || textInput === 'aceito';

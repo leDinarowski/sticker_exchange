@@ -7,16 +7,25 @@ import { getUserActiveListingsCount } from '../db/listings.js';
 import { ConversationStep, User } from '../types/index.js';
 import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 const UPDATE_PROMPT =
   'Envie os códigos para substituir sua lista, ou use "adicionar" / "remover" para ajustes.';
+
+const BUTTON_LABELS = {
+  'Sim, ainda tenho': 'inv_keep',
+  'Atualizar Figurinhas': 'inv_update',
+  'Não tenho mais': 'inv_clear',
+  Confirmar: 'clear_confirm',
+  Cancelar: 'clear_cancel',
+};
 
 export async function handleConfirmingInventory(
   user: User,
   payload: WebhookPayload,
   phone: string
 ): Promise<Result<void, Error>> {
-  const buttonId = payload.buttonsResponseMessage?.selectedButtonId ?? '';
+  const buttonId = resolveButtonId(payload, BUTTON_LABELS);
   const text = payload.text?.message?.trim() ?? '';
   const ctx = user.conversation_state?.context ?? {};
 

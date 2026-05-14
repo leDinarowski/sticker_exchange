@@ -16,6 +16,7 @@ import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
 import { findNearestMeetingPlace } from '../db/meeting-places.js';
 import { formatMeetingPlaceMessage } from '../utils/format-meeting-place.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 // ─── Entry point ────────────────────────────────────────────────────────────
 
@@ -92,7 +93,10 @@ function resolveRespondentAction(
   payload: WebhookPayload,
   matchId: string
 ): 'accept' | 'decline' | 'unknown' {
-  const buttonId = payload.buttonsResponseMessage?.selectedButtonId;
+  const buttonId = resolveButtonId(payload, {
+    Sim: `match_accept_${matchId}`,
+    Não: `match_decline_${matchId}`,
+  });
   if (buttonId === `match_accept_${matchId}`) return 'accept';
   if (buttonId === `match_decline_${matchId}`) return 'decline';
 
@@ -256,4 +260,3 @@ async function handleMatchInitiator(
   if (send.isErr()) return send;
   return showMainMenu(user.id, phone);
 }
-
