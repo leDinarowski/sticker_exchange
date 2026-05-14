@@ -42,8 +42,11 @@ export interface StateContext {
   mode?: 'discovery' | 'bilateral';
   discovery_list?: DiscoveryEntry[];
 
+  // ONBOARDING_NAME (confirmation phase)
+  pending_name?: string;
+
   // ONBOARDING_LISTINGS (re-entry for update)
-  pending_listings?: number[];
+  pending_listings?: string[];
 
   // AWAITING_MATCH_RESPONSE
   pending_match_id?: string;

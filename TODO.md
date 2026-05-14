@@ -193,12 +193,12 @@
 - [ ] Distinguir "lugar não encontrado" (log info) de "query com erro" (log warn) nos logs
 - [ ] Testes: mock `findNearestMeetingPlace` retornando null → log `meeting_place_not_found` emitido
 
-**US-10.5 — Echo-back de confirmação para nome no onboarding**
-- [ ] Em `src/handlers/onboarding-name.ts`: ao receber texto válido, armazenar `pending_name` no contexto em vez de salvar diretamente
-- [ ] Enviar echo-back: "Nome: XPTO\n\nConfirma?" com botões [Confirmar] [Alterar]
-- [ ] Ao [Confirmar]: salvar nome, avançar; ao [Alterar]: limpar `pending_name`, re-perguntar
-- [ ] Atualizar schema de contexto JSONB em `.claude/skills/state-machine/SKILL.md`
-- [ ] Testes: nome digitado → echo-back enviado + pending_name salvo; [Confirmar] → nome salvo; [Alterar] → re-prompt
+**US-10.5 — Echo-back de confirmação para nome no onboarding** ✅ 2026-05-13
+- [x] Em `src/handlers/onboarding-name.ts`: ao receber texto válido, armazenar `pending_name` no contexto em vez de salvar diretamente
+- [x] Enviar echo-back: "Nome: XPTO\n\nConfirma?" com botões [Confirmar] [Alterar]
+- [x] Ao [Confirmar]: salvar nome, avançar; ao [Alterar]: limpar `pending_name`, re-perguntar
+- [x] Atualizar schema de contexto JSONB em `.claude/skills/state-machine/SKILL.md`
+- [x] Testes: nome digitado → echo-back enviado + pending_name salvo; [Confirmar] → nome salvo; [Alterar] → re-prompt
 
 **US-10.6 — Modo de acumulação para figurinhas em mensagens separadas**
 - [ ] Em `src/handlers/onboarding-listings.ts`: ao receber códigos sem confirmação pendente, acrescentar a `context.accumulated_codes` (deduplicar)
