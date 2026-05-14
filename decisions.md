@@ -701,7 +701,7 @@ fallback mapping still had `textInput === '1'` → confirm. Users typing "2" to 
 instead triggering Corrigir (clear). The bug was masked in tests because tests used `buttonId`.
 
 ### Decision
-1. Enable real Z-API native buttons via `send-button-actions` (endpoint) with `buttonActions` array where each button has `type: 'REPLY'`.
+1. Enable real Z-API native buttons via `send-button-list` (endpoint) with `buttonList.buttons` array of `{ id, label }` objects.
 2. Enable real Z-API option lists via `send-option-list` (endpoint) with `optionList` wrapping a flat `options` array (sections are flattened on our side for compatibility with the existing `ListSection[]` API).
 3. Remove the "Adicionar mais" button from the accumulation flow — users type more codes without needing to tap a button, making the option redundant and the text fallback simpler (2 buttons = '1' and '2' are unambiguous).
 4. Text fallback (`textInput === '1'`) is kept in all handlers as a defensive backup for unexpected plain-text responses.
