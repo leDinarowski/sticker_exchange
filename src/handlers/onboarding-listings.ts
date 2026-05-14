@@ -88,15 +88,16 @@ export async function handleOnboardingListings(
   const effectiveOp = accumulated.length > 0 ? pendingOp : op;
   const formatted = formatListingPreview(newAccumulated);
 
+  const optionsSuffix = '\n\n1️⃣ Confirmar\n2️⃣ Corrigir';
   let echoText: string;
   if (collectingWants) {
-    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+    echoText = `Você busca: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
   } else if (effectiveOp === 'add') {
-    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+    echoText = `Adicionar: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
   } else if (effectiveOp === 'remove') {
-    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+    echoText = `Remover: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
   } else {
-    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:`;
+    echoText = `Lista atual: ${formatted}.\n\nContinue digitando para adicionar mais ou confirme:${optionsSuffix}`;
   }
 
   const sendResult = await sendButtons(
