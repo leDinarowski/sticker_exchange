@@ -32,6 +32,7 @@ export default async function handler(
       event: 'webhook_parse_failed',
       issues: parsed.error.issues.length,
       paths: parsed.error.issues.map((i) => i.path.join('.')),
+      rawBody: JSON.stringify(req.body).slice(0, 500),
     });
     res.status(200).json({ ok: true });
     return;

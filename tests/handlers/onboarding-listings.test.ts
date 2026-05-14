@@ -86,6 +86,17 @@ function makeEmptyPayload(): WebhookPayload {
   };
 }
 
+function makeListResponsePayload(rowId: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback',
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    listResponseMessage: { selectedRowId: rowId },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingListings — parse phase (first message)', () => {
@@ -452,6 +463,33 @@ describe('handleOnboardingListings — collecting_wants mode', () => {
     expect(zapi.sendText).toHaveBeenCalledWith(
       '5511999999999',
       expect.stringContaining('figurinhas você busca')
+    );
+  });
+
+  it('saves listings on listResponseMessage selectedRowId "confirm_listings" (send-button-list callback)', async () => {
+    const user = makeUser(['BRA5', 'ARG3']);
+    vi.mocked(listingsService.applyListingUpdate).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(idle.showMainMenu).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeListResponsePayload('confirm_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(listingsService.applyListingUpdate).toHaveBeenCalledWith('uuid-1', 'sticker', expect.any(Object));
+  });
+
+  it('clears accumulated on listResponseMessage selectedRowId "correct_listings" (send-button-list callback)', async () => {
+    const user = makeUser(['BRA5']);
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingListings(user, makeListResponsePayload('correct_listings'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.transitionState).toHaveBeenCalledWith(
+      'uuid-1',
+      ConversationStep.ONBOARDING_LISTINGS,
+      {}
     );
   });
 });

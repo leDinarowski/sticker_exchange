@@ -5,6 +5,7 @@ import { ConversationStep, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
 import { showMainMenu } from './idle.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 const RADIUS_MAP: Record<string, number> = {
   r1: 1,
@@ -23,10 +24,7 @@ export async function handleOnboardingRadius(
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
   const textInput = payload.text?.message?.trim() ?? '';
-  const buttonId =
-    payload.buttonsResponseMessage?.selectedButtonId ??
-    TEXT_TO_RADIUS_ID[textInput] ??
-    '';
+  const buttonId = resolveButtonId(payload) || TEXT_TO_RADIUS_ID[textInput] || '';
   const radiusKm = RADIUS_MAP[buttonId];
 
   if (radiusKm === undefined) {

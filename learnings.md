@@ -319,6 +319,25 @@ SELECT id, name, neighborhood, active FROM meeting_places ORDER BY created_at DE
 
 ---
 
+## 2026-05-14 — Z-API button responses can omit `selectedButtonId`, causing silent webhook rejection
+
+**Hypothesis / Question:** When a user clicks a native button (sent via `send-button-list`), Z-API always returns `buttonsResponseMessage.selectedButtonId` as a non-null string.
+
+**Observation:** Vercel production logs showed `webhook_parse_failed` with `paths: ["buttonsResponseMessage.selectedButtonId"]` every time the user clicked [Alterar] or [Confirmar] during onboarding. Z-API was sending a `buttonsResponseMessage` object but without a valid string `selectedButtonId` (field absent or null). The Zod schema required `selectedButtonId: z.string()` inside the object — optional at the object level, but required when the object is present. This caused the entire webhook payload to fail validation and be silently dropped (200 OK returned, no handler invoked). The user saw the state frozen in `ONBOARDING_NAME`, and any subsequent text was re-processed as a name → infinite loop.
+
+Additionally, `send-button-list` may return the button selection in `listResponseMessage.selectedRowId` depending on Z-API account configuration. All handlers were checking only `buttonsResponseMessage?.selectedButtonId`, missing this second path.
+
+**Impact:** Every button click during onboarding was silently ignored. Users got stuck in a loop. The bug existed for any handler relying on `buttonsResponseMessage?.selectedButtonId` (onboarding-name, onboarding-terms, onboarding-radius, onboarding-listings, match button intercept in router).
+
+**Action:**
+1. Schema: `selectedButtonId: z.string().optional()` + `.passthrough()` on the object — parse no longer fails if the field is absent or Z-API sends extra fields.
+2. `resolveButtonId(payload)` helper in `src/webhook/router.ts` — checks both `buttonsResponseMessage.selectedButtonId` and `listResponseMessage.selectedRowId`. All handlers must use this; never access the fields directly.
+3. `rawBody` field added to `webhook_parse_failed` log for future diagnostics.
+4. Tests now cover both button response paths and the missing-selectedButtonId case.
+See ADR-027 for updated consequences.
+
+---
+
 ## 2026-05-13 — Z-API sends group message webhooks to the bot; groups trigger onboarding flow
 
 **Hypothesis / Question:** The bot only receives webhook callbacks from direct (1:1) WhatsApp chats.

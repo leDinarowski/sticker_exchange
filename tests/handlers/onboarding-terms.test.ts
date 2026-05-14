@@ -51,6 +51,17 @@ function makeTextPayload(text: string): WebhookPayload {
   };
 }
 
+function makeListResponsePayload(rowId: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    listResponseMessage: { selectedRowId: rowId },
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingTerms', () => {
@@ -126,5 +137,26 @@ describe('handleOnboardingTerms', () => {
 
     expect(result.isOk()).toBe(true);
     expect(db.recordConsent).toHaveBeenCalledWith('uuid-1');
+  });
+
+  it('records consent via listResponseMessage selectedRowId "terms_accept" (send-button-list callback)', async () => {
+    vi.mocked(db.recordConsent).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingTerms(mockUser, makeListResponsePayload('terms_accept'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.recordConsent).toHaveBeenCalledWith('uuid-1');
+  });
+
+  it('records refusal via listResponseMessage selectedRowId "terms_refuse" (send-button-list callback)', async () => {
+    vi.mocked(db.recordRefusal).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const result = await handleOnboardingTerms(mockUser, makeListResponsePayload('terms_refuse'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.recordRefusal).toHaveBeenCalledWith('uuid-1');
   });
 });

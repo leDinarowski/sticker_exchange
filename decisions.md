@@ -709,9 +709,11 @@ instead triggering Corrigir (clear). The bug was masked in tests because tests u
 ### Rationale
 - Native buttons are better UX: interactive elements vs. typing numbers.
 - Removing the redundant third button eliminates the text fallback ambiguity permanently.
-- The `send-button-actions` and `send-option-list` endpoints are the standard Z-API paths for paid accounts (confirmed via developer.z-api.io).
-- No handler changes needed — all button routing already uses `buttonId` checks.
+- `send-button-list` (not `send-button-actions`) is the endpoint currently in use; `send-option-list` is used for list messages.
+- No handler changes needed — all button routing uses `resolveButtonId(payload)` which checks both response fields.
 
 ### Consequences
-- If Z-API's button toggle is disabled in the panel, `send-button-actions` will return a non-200 and the function returns an `Err`. Verify toggle is active before deploying.
+- If Z-API's button toggle is disabled in the panel, `send-button-list` will return a non-200 and the function returns an `Err`. Verify toggle is active before deploying.
+- Z-API may return button clicks as `buttonsResponseMessage.selectedButtonId` OR `listResponseMessage.selectedRowId` depending on account configuration. The `resolveButtonId()` helper in `src/webhook/router.ts` normalises both. **Never access button fields directly in handlers.**
+- The Zod schema uses `selectedButtonId: z.string().optional()` with `.passthrough()` so unexpected fields from Z-API do not cause parse failures. If `webhook_parse_failed` appears in logs for button responses, the `rawBody` field in the log will reveal the actual Z-API structure.
 

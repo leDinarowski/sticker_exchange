@@ -62,6 +62,28 @@ function makeButtonPayload(buttonId: string): WebhookPayload {
   };
 }
 
+function makeListResponsePayload(rowId: string): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    listResponseMessage: { selectedRowId: rowId },
+  };
+}
+
+function makeButtonPayloadWithoutId(): WebhookPayload {
+  return {
+    type: 'ReceivedCallback' as const,
+    phone: '5511999999999',
+    instanceId: 'inst',
+    messageId: 'msg-1',
+    fromMe: false,
+    buttonsResponseMessage: {},
+  };
+}
+
 beforeEach(() => vi.clearAllMocks());
 
 describe('handleOnboardingName — parse phase', () => {
@@ -254,5 +276,42 @@ describe('handleOnboardingName — confirmation phase', () => {
     const result = await handleOnboardingName(user, makeButtonPayload('confirm_name'));
 
     expect(result.isErr()).toBe(true);
+  });
+
+  it('saves name on listResponseMessage selectedRowId "confirm_name" (send-button-list callback)', async () => {
+    vi.mocked(db.updateUserName).mockResolvedValue(ok(undefined));
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendButtons).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Maria' });
+    const result = await handleOnboardingName(user, makeListResponsePayload('confirm_name'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).toHaveBeenCalledWith('uuid-1', 'Maria');
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_TERMS, {});
+  });
+
+  it('re-prompts on listResponseMessage selectedRowId "alter_name" (send-button-list callback)', async () => {
+    vi.mocked(db.transitionState).mockResolvedValue(ok(undefined));
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Maria' });
+    const result = await handleOnboardingName(user, makeListResponsePayload('alter_name'));
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).not.toHaveBeenCalled();
+    expect(db.transitionState).toHaveBeenCalledWith('uuid-1', ConversationStep.ONBOARDING_NAME, {});
+    expect(zapi.sendText).toHaveBeenCalledWith('5511999999999', expect.stringContaining('Claro'));
+  });
+
+  it('re-prompts when buttonsResponseMessage has no selectedButtonId (Z-API parse fallback)', async () => {
+    vi.mocked(zapi.sendText).mockResolvedValue(ok(undefined));
+
+    const user = makeUser(undefined, { pending_name: 'Maria' });
+    const result = await handleOnboardingName(user, makeButtonPayloadWithoutId());
+
+    expect(result.isOk()).toBe(true);
+    expect(db.updateUserName).not.toHaveBeenCalled();
+    expect(zapi.sendText).toHaveBeenCalled();
   });
 });
