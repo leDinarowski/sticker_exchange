@@ -37,6 +37,7 @@ export interface ConversationStateContext {
   updating_location?: boolean;
   collecting_wants?: boolean;
   pending_clear?: boolean;
+  pending_name?: string;
   watch_mode?: 'discovery' | 'bilateral';
   watch_attempts?: number;
 }
