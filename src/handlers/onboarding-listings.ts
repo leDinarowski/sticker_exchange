@@ -13,7 +13,7 @@ import { WebhookPayload } from '../webhook/schema.js';
 import { resolveButtonId } from '../webhook/utils.js';
 import { runTrailingEcho } from '../utils/debounce.js';
 
-const DEBOUNCE_MS = 3500;
+const DEBOUNCE_MS = 10_000;
 
 function isDebounceEnabled(): boolean {
   return process.env['DEBOUNCE_ENABLED'] === 'true';
