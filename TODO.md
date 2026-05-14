@@ -227,3 +227,14 @@
 - [x] `src/services/zapi.ts`: substituir `sendList` text fallback por chamada real ao endpoint `send-option-list`
 - [x] Remover comentários TEMP de `src/services/zapi.ts`
 - [x] Adicionar ADR-027 documentando o upgrade e remoção do text fallback
+
+**US-10.10 — Corrigir devolve lista atual para usuário editar (sem redigitar do zero)**
+- [ ] `src/handlers/onboarding-listings.ts`: importar `compactCodes` de `../utils/listing-parser.js`
+- [ ] No branch `correct_listings`, se `accumulated.length > 0`: enviar `compactCodes(accumulated)` como `sendText` (msg 1, sem prefixo, copiável) + instrução "Copie a lista acima, edite e me envie a versão corrigida. Vou substituir tudo pela nova lista." (msg 2)
+- [ ] Manter comportamento atual (`sendText(rePrompt)`) quando `accumulated.length === 0`
+- [ ] Preservar `collecting_wants` ao zerar `accumulated_codes`
+- [ ] Atualizar testes em `tests/handlers/onboarding-listings.test.ts`: cenário [Corrigir] com lista populada agora envia duas `sendText` (lista + instrução); cenário com lista vazia continua enviando RE_PROMPT
+- [ ] Teste manual via Z-API: enviar `BRA3, BRA5`, clicar Corrigir, copiar a lista, editar e enviar → confirmar substituição
+
+**US-10.11 — Debounce ao acumular códigos (PR-B, ainda não iniciado)**
+- [ ] Ver plano em `~/.claude/plans/superado-o-problema-com-floating-aurora.md` (Ponto 1)
