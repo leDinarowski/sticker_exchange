@@ -111,6 +111,20 @@ Always use the Supabase **connection pooler URL** (`SUPABASE_DB_POOLER_URL`), no
 - Body text: concise. Prefer 1-2 short sentences over long explanations.
 - See `.claude/skills/whatsapp-flow/SKILL.md` for Z-API call patterns.
 
+## Z-API Button Response Format
+
+Z-API can return a button click in one of two webhook fields depending on the endpoint used:
+- `buttonsResponseMessage.selectedButtonId` — Reply Buttons (`send-button-actions`)
+- `listResponseMessage.selectedRowId` — Button List (`send-button-list`)
+
+Additionally, Z-API may send a `buttonsResponseMessage` object **without** a `selectedButtonId` (field absent or null), which would previously fail Zod parse. The schema treats `selectedButtonId` as optional.
+
+**Rule: Never access `payload.buttonsResponseMessage?.selectedButtonId` directly in a handler.**
+Always use `resolveButtonId(payload)` exported from `src/webhook/router.ts`. It checks both fields and returns an empty string when neither is present.
+
+**Rule: Tests must cover both button response paths.**
+Use `makeButtonPayload(id)` (buttonsResponseMessage) AND `makeListResponsePayload(id)` (listResponseMessage) for any handler that processes button clicks.
+
 ## Conversation State Machine
 
 User sessions are stateful over WhatsApp. Each user row in the DB has a `conversation_state` JSONB field.

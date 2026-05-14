@@ -3,6 +3,8 @@ import { logger } from '../utils/logger.js';
 import { User, ConversationStep } from '../types/index.js';
 import { transitionState, UserIdentifier } from '../db/users.js';
 import { WebhookPayload } from './schema.js';
+import { resolveButtonId } from './utils.js';
+
 import { handleNew } from '../handlers/new.js';
 import { handleOnboardingName } from '../handlers/onboarding-name.js';
 import { handleOnboardingTerms } from '../handlers/onboarding-terms.js';
@@ -70,8 +72,8 @@ export async function route(
   logger.info({ userId: user.id, step, event: 'routing' });
 
   // Match-button intercept: handle regardless of user's current state (paid account real buttons)
-  const anyButtonId = payload.buttonsResponseMessage?.selectedButtonId;
-  if (anyButtonId?.startsWith('match_accept_') || anyButtonId?.startsWith('match_decline_')) {
+  const anyButtonId = resolveButtonId(payload);
+  if (anyButtonId.startsWith('match_accept_') || anyButtonId.startsWith('match_decline_')) {
     return withTiming(user.id, step, () =>
       handleAwaitingMatchResponse(user, payload, phone)
     );
@@ -95,8 +97,7 @@ export async function route(
 
     case ConversationStep.IDLE: {
       const rowId =
-        payload.listResponseMessage?.selectedRowId ??
-        payload.buttonsResponseMessage?.selectedButtonId ??
+        resolveButtonId(payload) ||
         IDLE_TEXT_TO_ROW_ID[payload.text?.message?.trim() ?? ''];
 
       if (rowId === 'update_location') return withTiming(user.id, step, () => handleUpdateLocation(user, phone));

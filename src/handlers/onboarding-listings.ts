@@ -9,6 +9,7 @@ import { runBilateralQuery } from './bilateral.js';
 import { parseListingInput, formatListingPreview } from '../utils/listing-parser.js';
 import { showMainMenu } from './idle.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 const RE_PROMPT =
   'Envie os códigos das suas figurinhas duplicadas. Ex: BRA5, ARG3, FWC8 ou BRA5-10 para intervalo.';
@@ -25,7 +26,7 @@ export async function handleOnboardingListings(
   const pendingOp = ctx.pending_op ?? 'set';
   const collectingWants = ctx.collecting_wants === true;
   const rePrompt = collectingWants ? WANTS_PROMPT : RE_PROMPT;
-  const buttonId = payload.buttonsResponseMessage?.selectedButtonId ?? '';
+  const buttonId = resolveButtonId(payload);
   const textInput = payload.text?.message?.trim() ?? '';
 
   // ── [Confirmar]: save accumulated list ────────────────────────────────────

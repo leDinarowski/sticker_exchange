@@ -4,6 +4,7 @@ import { transitionState, updateUserName } from '../db/users.js';
 import { ConversationStep, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 const MAX_RETRIES = 3;
 const RE_PROMPT = 'Claro, qual é o seu nome?';
@@ -14,7 +15,7 @@ export async function handleOnboardingName(
 ): Promise<Result<void, Error>> {
   const ctx = user.conversation_state?.context ?? {};
   const pendingName = ctx.pending_name;
-  const buttonId = payload.buttonsResponseMessage?.selectedButtonId ?? '';
+  const buttonId = resolveButtonId(payload);
   const textInput = payload.text?.message?.trim() ?? '';
 
   // ── Confirmation phase ────────────────────────────────────────────────────

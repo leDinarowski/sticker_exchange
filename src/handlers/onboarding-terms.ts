@@ -4,12 +4,13 @@ import { transitionState, recordConsent, recordRefusal } from '../db/users.js';
 import { ConversationStep, User } from '../types/index.js';
 import { sendText, sendButtons } from '../services/zapi.js';
 import { WebhookPayload } from '../webhook/schema.js';
+import { resolveButtonId } from '../webhook/utils.js';
 
 export async function handleOnboardingTerms(
   user: User,
   payload: WebhookPayload
 ): Promise<Result<void, Error>> {
-  const buttonId = payload.buttonsResponseMessage?.selectedButtonId;
+  const buttonId = resolveButtonId(payload);
   const textInput = payload.text?.message?.trim().toLowerCase() ?? '';
 
   const isAccept = buttonId === 'terms_accept' || textInput === '1' || textInput === 'aceito';

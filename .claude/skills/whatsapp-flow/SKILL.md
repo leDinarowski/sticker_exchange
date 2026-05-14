@@ -22,39 +22,36 @@ All Z-API calls go through `src/services/zapi.ts`. Never call Z-API directly fro
 ### Send a plain text message
 
 ```typescript
-await zapi.sendText({
-  phone: user.phone,
-  message: 'Suas figurinhas foram atualizadas.',
-});
+await sendText(user.phone, 'Suas figurinhas foram atualizadas.');
 ```
 
 ### Send a button message (up to 3 buttons)
 
 ```typescript
-await zapi.sendButtons({
-  phone: user.phone,
-  message: 'Suas figurinhas ainda estao disponiveis?',
-  buttons: [
+await sendButtons(
+  user.phone,
+  'Suas figurinhas ainda estao disponiveis?',
+  [
     { id: 'confirm_inventory', label: 'Sim, ainda tenho' },
-    { id: 'update_inventory', label: 'Atualizar figurinhas' },
-    { id: 'clear_inventory', label: 'Nao tenho mais' },
-  ],
-});
+    { id: 'update_inventory',  label: 'Atualizar figurinhas' },
+    { id: 'clear_inventory',   label: 'Nao tenho mais' },
+  ]
+);
 ```
 
 ### Send a list message (more than 3 options)
 
 ```typescript
-await zapi.sendList({
-  phone: user.phone,
-  message: 'O que voce quer fazer?',
-  buttonLabel: 'Ver opcoes',
-  sections: [
+await sendList(
+  user.phone,
+  'O que voce quer fazer?',
+  'Ver opcoes',
+  [
     {
       title: 'Buscar',
       rows: [
-        { id: 'discovery', title: 'Olhar em Volta', description: 'Ver quem esta perto' },
-        { id: 'bilateral', title: 'Match Perfeito', description: 'Troca exata' },
+        { id: 'discovery',  title: 'Olhar em Volta', description: 'Ver quem esta perto' },
+        { id: 'bilateral',  title: 'Match Perfeito', description: 'Troca exata' },
       ],
     },
     {
@@ -64,69 +61,63 @@ await zapi.sendList({
         { id: 'update_location', title: 'Atualizar Localizacao' },
       ],
     },
-  ],
-});
+  ]
+);
 ```
 
 ### Create a WhatsApp group
 
 ```typescript
-const group = await zapi.createGroup({
-  name: 'Troca de Figurinhas',
-  participants: [userA.phone, userB.phone],
-});
-// Bot is automatically admin
-```
-
-### Send a message to a group
-
-```typescript
-await zapi.sendText({
-  phone: group.id,  // group ID returned from createGroup
-  message: 'Combinado! Entrem em contato para organizar a troca.',
-});
+const groupResult = await createGroup('Troca de Figurinhas', [userA.phone, userB.phone]);
+// bot is automatically admin; groupResult.value is the group phone/JID
 ```
 
 ---
 
 ## Webhook Payload Structure
 
-Z-API fires a POST to `/api/webhook` for every incoming message. The payload shape:
+Z-API fires a POST to `/api/webhook` for every incoming message. **The payload is flat — all fields are at the top level, not nested in a `message` object.**
 
 ```typescript
-// Validated via Zod in src/webhook/schema.ts
-const WebhookPayload = z.object({
-  type: z.enum(['ReceivedCallback']),
-  phone: z.string(),        // sender's phone number
+// Actual schema — src/webhook/schema.ts
+const webhookPayloadSchema = z.object({
+  type: z.literal('ReceivedCallback'),
+  phone: z.string(),          // sender phone number (or group JID with @g.us)
   instanceId: z.string(),
-  message: z.object({
-    messageId: z.string(),
-    fromMe: z.boolean(),
-    type: z.enum(['text', 'buttonsResponseMessage', 'listResponseMessage', 'locationMessage', 'imageMessage', 'audioMessage']),
-    text: z.object({ message: z.string() }).optional(),
-    buttonsResponseMessage: z.object({ selectedButtonId: z.string() }).optional(),
-    listResponseMessage: z.object({ selectedRowId: z.string() }).optional(),
-    location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
-  }),
+  messageId: z.string().optional(),   // absent in some button-response payloads
+  fromMe: z.boolean(),
+  text: z.object({ message: z.string() }).optional(),
+  buttonsResponseMessage: z.object({
+    selectedButtonId: z.string().optional(),  // may be absent — use resolveButtonId()
+  }).passthrough().optional(),
+  listResponseMessage: z.object({ selectedRowId: z.string() }).optional(),
+  location: z.object({ latitude: z.number(), longitude: z.number() }).optional(),
 });
 ```
 
-Always validate the payload with Zod before accessing any field.
+Always validate the payload with Zod before accessing any field. Group messages (`@g.us` phone) are filtered in `api/webhook.ts` after schema validation.
 
 ---
 
 ## Handling Button Replies
 
+**Z-API can return a button click in one of two fields** depending on the endpoint:
+- `buttonsResponseMessage.selectedButtonId` — Reply Buttons (`send-button-actions`)
+- `listResponseMessage.selectedRowId` — Button List (`send-button-list`)
+
+**Never access these fields directly. Always use `resolveButtonId(payload)` from `src/webhook/router.ts`:**
+
 ```typescript
-if (payload.message.type === 'buttonsResponseMessage') {
-  const buttonId = payload.message.buttonsResponseMessage?.selectedButtonId;
-  switch (buttonId) {
-    case 'confirm_inventory': return handleConfirmInventory(user);
-    case 'update_inventory':  return handleUpdateInventory(user);
-    case 'clear_inventory':   return handleClearInventory(user);
-    default: return sendMainMenu(user);
-  }
-}
+import { resolveButtonId } from '../webhook/router.js';
+
+const buttonId = resolveButtonId(payload);  // checks both fields, returns '' if neither
+
+if (buttonId === 'confirm_inventory') return handleConfirmInventory(user);
+if (buttonId === 'update_inventory')  return handleUpdateInventory(user);
+if (buttonId === 'clear_inventory')   return handleClearInventory(user);
+// always have a text fallback too:
+const textInput = payload.text?.message?.trim() ?? '';
+if (textInput === '1') return handleConfirmInventory(user);
 ```
 
 ---

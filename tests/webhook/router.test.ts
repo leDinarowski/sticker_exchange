@@ -319,7 +319,7 @@ describe('router', () => {
     expect(idleHandler.showMainMenu).not.toHaveBeenCalled();
   });
 
-  it('intercepts match_accept_ button regardless of user state', async () => {
+  it('intercepts match_accept_ button regardless of user state (buttonsResponseMessage)', async () => {
     vi.mocked(connectionResponseHandler.handleAwaitingMatchResponse).mockResolvedValue(ok(undefined));
     const user = makeUser(ConversationStep.BROWSING);
     const payload: WebhookPayload = {
@@ -336,5 +336,42 @@ describe('router', () => {
     expect(result.isOk()).toBe(true);
     expect(connectionResponseHandler.handleAwaitingMatchResponse).toHaveBeenCalled();
     expect(discoveryHandler.handleBrowsing).not.toHaveBeenCalled();
+  });
+
+  it('intercepts match_accept_ button via listResponseMessage (send-button-list callback)', async () => {
+    vi.mocked(connectionResponseHandler.handleAwaitingMatchResponse).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.BROWSING);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-3',
+      fromMe: false,
+      listResponseMessage: { selectedRowId: 'match_accept_some-uuid' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(connectionResponseHandler.handleAwaitingMatchResponse).toHaveBeenCalled();
+    expect(discoveryHandler.handleBrowsing).not.toHaveBeenCalled();
+  });
+
+  it('intercepts match_decline_ button via listResponseMessage (send-button-list callback)', async () => {
+    vi.mocked(connectionResponseHandler.handleAwaitingMatchResponse).mockResolvedValue(ok(undefined));
+    const user = makeUser(ConversationStep.IDLE);
+    const payload: WebhookPayload = {
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'inst',
+      messageId: 'msg-4',
+      fromMe: false,
+      listResponseMessage: { selectedRowId: 'match_decline_some-uuid' },
+    };
+
+    const result = await route(user, { phone: '5511999999999' }, payload);
+
+    expect(result.isOk()).toBe(true);
+    expect(connectionResponseHandler.handleAwaitingMatchResponse).toHaveBeenCalled();
   });
 });
