@@ -95,7 +95,7 @@ const webhookPayloadSchema = z.object({
 });
 ```
 
-Always validate the payload with Zod before accessing any field. Group messages (`@g.us` phone) are filtered in `api/webhook.ts` after schema validation.
+Always validate the payload with Zod before accessing any field. Group messages are filtered in `api/webhook.ts` after schema validation. The filter checks any of: `phone` ending in `@g.us`, `isGroup === true`, or presence of `participantPhone` — Z-API does not always include the `@g.us` suffix.
 
 ---
 

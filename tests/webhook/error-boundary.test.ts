@@ -80,6 +80,46 @@ describe('group JID guard in webhook handler', () => {
     expect(res.json).toHaveBeenCalledWith({ ok: true });
   });
 
+  it('returns 200 silently when payload has isGroup: true (no @g.us suffix)', async () => {
+    const req = makeReq({
+      type: 'ReceivedCallback',
+      phone: '120363019502934028',
+      instanceId: 'test-instance',
+      messageId: 'group-msg-1',
+      fromMe: false,
+      isGroup: true,
+      participantPhone: '5511988888888',
+      chatName: 'Troca: A e B',
+      text: { message: 'oi no grupo' },
+    });
+    const res = makeRes();
+
+    await handler(req as never, res as never);
+
+    expect(usersDb.findUser).not.toHaveBeenCalled();
+    expect(router.route).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it('returns 200 silently when payload has participantPhone (defensive guard)', async () => {
+    const req = makeReq({
+      type: 'ReceivedCallback',
+      phone: '5511999999999',
+      instanceId: 'test-instance',
+      messageId: 'group-msg-2',
+      fromMe: false,
+      participantPhone: '5511988888888',
+      text: { message: 'oi' },
+    });
+    const res = makeRes();
+
+    await handler(req as never, res as never);
+
+    expect(usersDb.findUser).not.toHaveBeenCalled();
+    expect(router.route).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
   it('does not trigger group guard for a normal phone number', async () => {
     vi.mocked(router.route).mockResolvedValue(ok(undefined));
     const req = makeReq();

@@ -124,6 +124,24 @@ describe('webhookPayloadSchema', () => {
     expect(result.success).toBe(true);
   });
 
+  it('parses a Z-API group message with isGroup + participantPhone + chatName', () => {
+    const result = webhookPayloadSchema.safeParse({
+      ...BASE,
+      phone: '120363019502934028',
+      messageId: 'msg-9',
+      isGroup: true,
+      participantPhone: '5511988888888',
+      chatName: 'Troca: A e B',
+      text: { message: 'mensagem no grupo' },
+    });
+    expect(result.success).toBe(true);
+    if (result.success) {
+      expect(result.data.isGroup).toBe(true);
+      expect(result.data.participantPhone).toBe('5511988888888');
+      expect(result.data.chatName).toBe('Troca: A e B');
+    }
+  });
+
   it('rejects a payload with wrong type', () => {
     const result = webhookPayloadSchema.safeParse({
       ...BASE,
