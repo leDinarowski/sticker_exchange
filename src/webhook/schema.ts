@@ -6,6 +6,9 @@ export const webhookPayloadSchema = z.object({
   instanceId: z.string(),
   messageId: z.string().optional(),
   fromMe: z.boolean(),
+  isGroup: z.boolean().optional(),
+  participantPhone: z.string().optional(),
+  chatName: z.string().optional(),
   text: z.object({ message: z.string() }).optional(),
   buttonsResponseMessage: z.object({
     buttonId: z.string().nullable().optional(),

@@ -40,7 +40,35 @@ export default async function handler(
 
   const payload = parsed.data;
 
-  if (payload.phone.includes('@g.us')) {
+  // TODO(diagnose-group-loop): remover após confirmar que webhook_group_filtered
+  // está disparando para mensagens dentro de grupos criados pelo bot.
+  logger.info({
+    event: 'webhook_payload_diagnose_group',
+    keys: Object.keys(payload),
+    isGroup: payload.isGroup,
+    hasParticipantPhone: !!payload.participantPhone,
+    hasChatName: !!payload.chatName,
+    phonePrefix: payload.phone.slice(0, 6),
+    phoneEnd: payload.phone.slice(-6),
+    rawBody: JSON.stringify(req.body).slice(0, 800),
+  });
+
+  const groupSignal = payload.phone.includes('@g.us')
+    ? 'phone_suffix'
+    : payload.isGroup === true
+      ? 'is_group_flag'
+      : payload.participantPhone
+        ? 'has_participant_phone'
+        : null;
+
+  if (groupSignal) {
+    logger.info({
+      event: 'webhook_group_filtered',
+      signal: groupSignal,
+      phonePrefix: payload.phone.slice(0, 6),
+      hasParticipant: !!payload.participantPhone,
+      hasChatName: !!payload.chatName,
+    });
     res.status(200).json({ ok: true });
     return;
   }
